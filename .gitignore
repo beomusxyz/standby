@@ -27,3 +27,5 @@ SCRATCH.md
 doc.md
 release/
 *.apk
+# Personal learning notes, not part of the project
+app/docs/learning/
