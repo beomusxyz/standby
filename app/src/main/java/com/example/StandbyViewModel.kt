@@ -25,7 +25,16 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
     private val _standbyPages = MutableStateFlow<List<StandbyPage>>(emptyList())
     val standbyPages: StateFlow<List<StandbyPage>> = _standbyPages.asStateFlow()
 
-    private val settings = SettingsRepository(application)
+    private val container = (application as StandbyApplication).container
+    private val settings = container.settings
+    private val services = container.services
+
+    /**
+     * Stored reference so onCleared can check identity before clearing it. Declared here
+     * rather than next to the function because init assigns it, and Kotlin initialises
+     * properties in declaration order.
+     */
+    private val uploadHandler: (java.io.File, String) -> Unit = ::handlePluginUpload
 
     // Settings are re-exposed straight from the repository rather than mirrored here, so
     // there is one copy of each value and one place it can be changed.
@@ -36,19 +45,10 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
     val lowRefreshRateEnabled: StateFlow<Boolean> = settings.lowRefreshRateEnabled
     val lowRefreshRateValue: StateFlow<Int> = settings.lowRefreshRateValue
 
-    private var pluginServer: PluginServer? = null
-
-    private val _isServerRunning = MutableStateFlow(false)
-    val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
-
-    private val _serverPort = MutableStateFlow(0)
-    val serverPort: StateFlow<Int> = _serverPort.asStateFlow()
-
-    private val _serverPin = MutableStateFlow("")
-    val serverPin: StateFlow<String> = _serverPin.asStateFlow()
-
-    private val _serverIp = MutableStateFlow("")
-    val serverIp: StateFlow<String> = _serverIp.asStateFlow()
+    val isServerRunning: StateFlow<Boolean> = services.isServerRunning
+    val serverPort: StateFlow<Int> = services.serverPort
+    val serverPin: StateFlow<String> = services.serverPin
+    val serverIp: StateFlow<String> = services.serverIp
 
     private val _pendingImport = MutableStateFlow<PendingPluginImport?>(null)
     val pendingImport: StateFlow<PendingPluginImport?> = _pendingImport.asStateFlow()
@@ -114,7 +114,7 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         )
     }
 
-    val providerManager = ProviderManager(application)
+
 
     // ProviderManager writes weather_lat / weather_lon / weather_city / weather_last_update
     // to the same prefs file, so the repository's change listener picks those up on its own.
@@ -185,11 +185,11 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun triggerWeatherRefresh() {
-        viewModelScope.launch { providerManager.fetchWeather() }
+        viewModelScope.launch { services.providerManager.fetchWeather() }
     }
 
     suspend fun searchLocations(query: String): List<ProviderManager.GeocodingResult> {
-        return providerManager.searchLocations(query)
+        return services.providerManager.searchLocations(query)
     }
 
     init {
@@ -202,10 +202,9 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         loadPlugins()
-        if (settings.serverEnabled.value) {
-            startServer()
-        }
-        providerManager.startHourlyWeatherUpdates(viewModelScope)
+        // The server and the weather poller belong to StandbyServices now. All this has
+        // to do is say where an upload should land.
+        services.onPluginUploaded = uploadHandler
     }
 
     fun loadPlugins() {
@@ -597,63 +596,32 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
 
     fun setLowRefreshRateValue(value: Int) = settings.setLowRefreshRateValue(value)
 
-    fun setServerEnabled(enabled: Boolean) {
-        settings.setServerEnabled(enabled)
-        if (enabled) {
-            startServer()
-        } else {
-            stopServer()
-        }
-    }
+    fun setServerEnabled(enabled: Boolean) = settings.setServerEnabled(enabled)
 
-    private fun startServer() {
-        if (pluginServer != null) return
-        val server = PluginServer(
-            context = getApplication(),
-            onPluginReceived = { file, contentType ->
-                viewModelScope.launch {
-                    try {
-                        val context = getApplication<Application>()
-                        val pending = if (contentType.contains("application/zip") || file.name.endsWith(".zip")) {
-                            file.inputStream().use { input ->
-                                PluginManager.prepareZipPluginImport(context, input, file.name)
-                            }
-                        } else {
-                            PluginManager.prepareHtmlPluginImport(context, file.readText(), "Uploaded Plugin")
-                        }
-                        if (settings.confirmImportEnabled.value) {
-                            _pendingImport.value = pending
-                        } else {
-                            PluginManager.completePendingImport(context, pending, pending.name)
-                            loadPlugins()
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    } finally {
-                        // PluginServer hands us ownership of this temp file.
-                        file.delete()
+    private fun handlePluginUpload(file: java.io.File, contentType: String) {
+        viewModelScope.launch {
+            try {
+                val context = getApplication<Application>()
+                val pending = if (contentType.contains("application/zip") || file.name.endsWith(".zip")) {
+                    file.inputStream().use { input ->
+                        PluginManager.prepareZipPluginImport(context, input, file.name)
                     }
+                } else {
+                    PluginManager.prepareHtmlPluginImport(context, file.readText(), "Uploaded Plugin")
                 }
+                if (settings.confirmImportEnabled.value) {
+                    _pendingImport.value = pending
+                } else {
+                    PluginManager.completePendingImport(context, pending, pending.name)
+                    loadPlugins()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                // StandbyServices hands us ownership of this temp file.
+                file.delete()
             }
-        )
-        if (server.start()) {
-            pluginServer = server
-            _serverPort.value = server.port
-            _serverPin.value = server.pin
-            _serverIp.value = server.ipAddress
-            _isServerRunning.value = true
-        } else {
-            _isServerRunning.value = false
         }
-    }
-
-    private fun stopServer() {
-        pluginServer?.stop()
-        pluginServer = null
-        _serverPort.value = 0
-        _serverPin.value = ""
-        _serverIp.value = ""
-        _isServerRunning.value = false
     }
 
     fun loadPluginFromFile(context: Context, uri: Uri) {
@@ -733,8 +701,12 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         super.onCleared()
-        pluginServer?.stop()
-        providerManager.stopWeatherUpdates()
+        // The server and weather poller outlive this ViewModel by design, so nothing to
+        // tear down here. Drop the upload handler so a cleared ViewModel is not still
+        // being handed files.
+        if (services.onPluginUploaded === uploadHandler) {
+            services.onPluginUploaded = null
+        }
     }
 
     companion object {
