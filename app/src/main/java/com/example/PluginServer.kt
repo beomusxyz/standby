@@ -188,11 +188,17 @@ class PluginServer(
 
                 return try {
                     val contentLengthStr = session.headers["content-length"] ?: session.headers["Content-Length"]
-                    val contentLength = contentLengthStr?.toIntOrNull() ?: 0
+                    val contentLength = contentLengthStr?.toLongOrNull() ?: 0L
                     val contentType = session.headers["content-type"] ?: session.headers["Content-Type"] ?: "text/html"
 
-                    if (contentLength <= 0) {
+                    if (contentLength <= 0L) {
                         createResponse(Response.Status.BAD_REQUEST, "text/plain; charset=utf-8", "Empty upload content.")
+                    } else if (contentLength > MAX_UPLOAD_BYTES) {
+                        createResponse(
+                            Response.Status.PAYLOAD_TOO_LARGE,
+                            "text/plain; charset=utf-8",
+                            "Plugin exceeds the ${MAX_UPLOAD_BYTES / (1024 * 1024)}MB limit."
+                        )
                     } else {
                         // create temp file
                         val tempFile = java.io.File.createTempFile("upload_", ".tmp", context.cacheDir)
@@ -200,8 +206,8 @@ class PluginServer(
                             val input = session.inputStream
                             val buffer = ByteArray(8192)
                             var bytesRemaining = contentLength
-                            while (bytesRemaining > 0) {
-                                val toRead = Math.min(buffer.size, bytesRemaining)
+                            while (bytesRemaining > 0L) {
+                                val toRead = minOf(buffer.size.toLong(), bytesRemaining).toInt()
                                 val read = input.read(buffer, 0, toRead)
                                 if (read == -1) break
                                 output.write(buffer, 0, read)
@@ -238,5 +244,11 @@ class PluginServer(
         private const val MAX_FAILED_ATTEMPTS = 5
 
         private const val LOCKOUT_MS = 60_000L
+
+        /**
+         * Generous for HTML/CSS/JS. The largest plugin that ships with the app
+         * is bad_apple.zip at roughly 7MB, and that one embeds a video.
+         */
+        private const val MAX_UPLOAD_BYTES = 50L * 1024 * 1024
     }
 }
