@@ -43,7 +43,9 @@ class PluginServer(
             s.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false)
             server = s
             port = s.listeningPort
-            Log.d("PluginServer", "Server started successfully on IP $ipAddress and port $port with PIN $pin")
+            // Deliberately does not log the PIN. logcat is readable over adb and
+            // gets swept up by crash reporters and bug reports.
+            Log.d("PluginServer", "Server started on $ipAddress:$port")
             true
         } catch (e: Exception) {
             Log.e("PluginServer", "Failed to start server", e)
