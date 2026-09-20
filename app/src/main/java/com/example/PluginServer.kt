@@ -7,6 +7,8 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.nio.charset.StandardCharsets
+import java.security.SecureRandom
+import java.util.Locale
 
 class PluginServer(
     private val context: Context,
@@ -15,7 +17,10 @@ class PluginServer(
     private var server: MyNanoHttpd? = null
     var port: Int = 0
         private set
-    val pin: String = (1000..9999).random().toString()
+    // Generated from a CSPRNG. kotlin.random.Random is a fast, seedable,
+    // predictable PRNG -- fine for shuffling a list, never for a value an
+    // attacker is trying to guess.
+    val pin: String = String.format(Locale.US, "%06d", SecureRandom().nextInt(PIN_SPACE))
     var ipAddress: String = "127.0.0.1"
         private set
 
@@ -154,5 +159,7 @@ class PluginServer(
     }
 
     companion object {
+        /** 10^6, i.e. a six digit PIN. */
+        private const val PIN_SPACE = 1_000_000
     }
 }
