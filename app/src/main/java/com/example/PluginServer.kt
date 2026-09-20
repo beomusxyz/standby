@@ -9,6 +9,7 @@ import java.net.NetworkInterface
 import java.nio.charset.StandardCharsets
 import java.security.SecureRandom
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 
 class PluginServer(
     private val context: Context,
@@ -23,6 +24,13 @@ class PluginServer(
     val pin: String = String.format(Locale.US, "%06d", SecureRandom().nextInt(PIN_SPACE))
     var ipAddress: String = "127.0.0.1"
         private set
+
+    // Brute-force throttle. Widening the PIN to 10^6 values only buys time if
+    // the attacker is also limited in how fast they can spend guesses.
+    private val failedAttempts = AtomicInteger(0)
+
+    @Volatile
+    private var lockedOutUntil: Long = 0L
 
     init {
         ipAddress = getLocalIpAddress()
@@ -86,6 +94,16 @@ class PluginServer(
         }
     }
 
+    private fun registerFailedAttempt() {
+        if (failedAttempts.incrementAndGet() >= MAX_FAILED_ATTEMPTS) {
+            // Reset the counter as we lock out, so that when the window expires
+            // the client gets a fresh allowance instead of re-locking instantly.
+            failedAttempts.set(0)
+            lockedOutUntil = System.currentTimeMillis() + LOCKOUT_MS
+            Log.w("PluginServer", "Too many incorrect PINs; uploads locked for ${LOCKOUT_MS / 1000}s")
+        }
+    }
+
     private inner class MyNanoHttpd(port: Int) : NanoHTTPD(port) {
         override fun serve(session: IHTTPSession): Response {
             val uri = session.uri
@@ -109,10 +127,22 @@ class PluginServer(
             }
 
             if ("/upload" == uri && Method.POST == method) {
+                val now = System.currentTimeMillis()
+                if (now < lockedOutUntil) {
+                    val waitSeconds = (lockedOutUntil - now) / 1000 + 1
+                    return createResponse(
+                        Response.Status.TOO_MANY_REQUESTS,
+                        "text/plain; charset=utf-8",
+                        "Too many incorrect PINs. Try again in ${waitSeconds}s."
+                    )
+                }
+
                 val requestPin = session.headers["x-pin"] ?: session.headers["X-PIN"]
                 if (requestPin == null || requestPin != pin) {
+                    registerFailedAttempt()
                     return createResponse(Response.Status.UNAUTHORIZED, "text/plain; charset=utf-8", "Incorrect PIN/Passcode. Please try again.")
                 }
+                failedAttempts.set(0)
 
                 return try {
                     val contentLengthStr = session.headers["content-length"] ?: session.headers["Content-Length"]
@@ -161,5 +191,10 @@ class PluginServer(
     companion object {
         /** 10^6, i.e. a six digit PIN. */
         private const val PIN_SPACE = 1_000_000
+
+        /** Consecutive wrong PINs tolerated before uploads are locked out. */
+        private const val MAX_FAILED_ATTEMPTS = 5
+
+        private const val LOCKOUT_MS = 60_000L
     }
 }
