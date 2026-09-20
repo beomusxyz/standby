@@ -28,4 +28,4 @@ doc.md
 release/
 *.apk
 # Personal learning notes, not part of the project
-app/docs/learning/
+docs/learning/
