@@ -96,6 +96,34 @@ class PluginServer(
     }
 
     /**
+     * Rejects any Host header that is not an IP literal.
+     *
+     * Without this, DNS rebinding walks straight past the same-origin policy.
+     * The attacker points a name they control at their own server, you load
+     * their page, then they repoint the name at this phone's LAN address. The
+     * browser still believes it is talking to evil.example, so their script is
+     * same-origin with this server and can read every response. Legitimate use
+     * always arrives via the bare IP printed in the UI, so a name in the Host
+     * header means something is off.
+     */
+    internal fun isHostAllowed(hostHeader: String?): Boolean {
+        if (hostHeader.isNullOrBlank()) return false
+        // Bracketed IPv6 literal, e.g. [fe80::1]:45821
+        if (hostHeader.startsWith("[")) return true
+        val host = hostHeader.substringBefore(':')
+        return host.equals("localhost", ignoreCase = true) || isIpv4Literal(host)
+    }
+
+    private fun isIpv4Literal(host: String): Boolean {
+        val parts = host.split('.')
+        if (parts.size != 4) return false
+        return parts.all { part ->
+            part.isNotEmpty() && part.length <= 3 &&
+                part.all(Char::isDigit) && part.toInt() in 0..255
+        }
+    }
+
+    /**
      * Compares in time that does not depend on how many leading characters
      * match. String's own != bails out at the first difference, so how long a
      * rejection takes leaks how much of the guess was right.
@@ -126,6 +154,13 @@ class PluginServer(
             // back without Allow-Origin fails, so the real request never leaves.
             fun createResponse(status: Response.IStatus, mimeType: String, message: String): Response =
                 newFixedLengthResponse(status, mimeType, message)
+
+            // NanoHTTPD lowercases header names as it parses them, so "host" is
+            // the correct lookup whatever casing the client actually sent.
+            if (!isHostAllowed(session.headers["host"])) {
+                Log.w("PluginServer", "Rejected request with non-literal Host header")
+                return createResponse(Response.Status.FORBIDDEN, "text/plain; charset=utf-8", "Forbidden.")
+            }
 
             if ("/" == uri && Method.GET == method) {
                 return createResponse(Response.Status.OK, "text/html; charset=utf-8", getUploaderHtml())
