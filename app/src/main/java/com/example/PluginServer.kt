@@ -7,6 +7,7 @@ import java.io.IOException
 import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
@@ -94,6 +95,14 @@ class PluginServer(
         }
     }
 
+    /**
+     * Compares in time that does not depend on how many leading characters
+     * match. String's own != bails out at the first difference, so how long a
+     * rejection takes leaks how much of the guess was right.
+     */
+    private fun constantTimeEquals(a: String, b: String): Boolean =
+        MessageDigest.isEqual(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
+
     private fun registerFailedAttempt() {
         if (failedAttempts.incrementAndGet() >= MAX_FAILED_ATTEMPTS) {
             // Reset the counter as we lock out, so that when the window expires
@@ -138,7 +147,7 @@ class PluginServer(
                 }
 
                 val requestPin = session.headers["x-pin"] ?: session.headers["X-PIN"]
-                if (requestPin == null || requestPin != pin) {
+                if (requestPin == null || !constantTimeEquals(requestPin, pin)) {
                     registerFailedAttempt()
                     return createResponse(Response.Status.UNAUTHORIZED, "text/plain; charset=utf-8", "Incorrect PIN/Passcode. Please try again.")
                 }
