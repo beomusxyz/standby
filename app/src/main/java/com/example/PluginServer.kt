@@ -215,6 +215,8 @@ class PluginServer(
                             }
                         }
 
+                        // Ownership of the temp file passes to the callback, which
+                        // is responsible for deleting it once the import settles.
                         onPluginReceived(tempFile, contentType)
                         
                         val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
