@@ -118,18 +118,14 @@ class PluginServer(
             val uri = session.uri
             val method = session.method
 
-            // cors headers helper
-            fun createResponse(status: Response.IStatus, mimeType: String, message: String): Response {
-                val response = newFixedLengthResponse(status, mimeType, message)
-                response.addHeader("Access-Control-Allow-Origin", "*")
-                response.addHeader("Access-Control-Allow-Methods", "POST, OPTIONS, GET")
-                response.addHeader("Access-Control-Allow-Headers", "X-PIN, Content-Type")
-                return response
-            }
-
-            if (Method.OPTIONS == method) {
-                return createResponse(Response.Status.NO_CONTENT, "text/plain", "")
-            }
+            // No CORS headers, deliberately. The uploader page is served by this
+            // same server and is therefore already same-origin, so it needs none.
+            // Their absence is what stops any other website scripting an upload:
+            // both the X-PIN header and the application/zip content type force
+            // the browser to send a preflight first, and a preflight that comes
+            // back without Allow-Origin fails, so the real request never leaves.
+            fun createResponse(status: Response.IStatus, mimeType: String, message: String): Response =
+                newFixedLengthResponse(status, mimeType, message)
 
             if ("/" == uri && Method.GET == method) {
                 return createResponse(Response.Status.OK, "text/html; charset=utf-8", getUploaderHtml())
