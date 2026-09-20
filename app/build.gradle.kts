@@ -42,6 +42,18 @@ android {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
   }
+
+  // Pin which JDK compiles this, rather than inheriting whatever launched Gradle.
+  // Gradle downloads it if the machine hasn't got it, so a clone builds identically
+  // on a laptop, on CI, and on an F-Droid build server. 21 because it is the current
+  // LTS; see docs/learning/08 for why that matters for reproducibility.
+  kotlin {
+    jvmToolchain(21)
+    compilerOptions {
+      // Must match compileOptions above or AGP fails on mismatched JVM targets.
+      jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
+  }
   buildFeatures {
     compose = true
     buildConfig = true

@@ -31,3 +31,16 @@ subprojects {
     }
   }
 }
+
+// Reproducible archives. By default Gradle stamps the build time into every zip
+// entry and orders entries by filesystem iteration, so two builds of identical
+// source produce different bytes. F-Droid rebuilds from source and compares
+// against the published APK, so "identical source, identical output" has to
+// actually hold.
+allprojects {
+  tasks.withType<AbstractArchiveTask>().configureEach {
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+  }
+}
+
