@@ -295,13 +295,12 @@ class ProviderManager(
         try {
             client.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
-                    val body = response.body
-                    if (body != null) {
-                        targetFile.outputStream().use { output ->
-                            body.byteStream().copyTo(output)
-                        }
-                        Log.d("ProviderManager", "Successfully cached icon from $secureUrl to ${targetFile.absolutePath}")
+                    // response.body stopped being nullable in okhttp 5, so the old
+                    // null check here was dead.
+                    targetFile.outputStream().use { output ->
+                        response.body.byteStream().copyTo(output)
                     }
+                    Log.d("ProviderManager", "Successfully cached icon from $secureUrl to ${targetFile.absolutePath}")
                 } else {
                     Log.e("ProviderManager", "Failed to download icon from $secureUrl: ${response.code}")
                 }
