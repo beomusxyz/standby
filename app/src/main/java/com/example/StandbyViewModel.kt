@@ -272,7 +272,7 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         loadPlugins()
-        if (sharedPreferences.getBoolean("server_enabled", true)) {
+        if (sharedPreferences.getBoolean("server_enabled", false)) {
             startServer()
         }
         providerManager.startHourlyWeatherUpdates(viewModelScope)
