@@ -27,21 +27,15 @@ to open it.
 
 ### Verify the app
 
-GitHub releases are signed with this certificate:
+GitHub releases for package `org.phorophyte.standby` are signed with this
+certificate. Copy the fingerprint below into AppVerifier:
 
 ```text
-Package: org.phorophyte.standby
-SHA-256: 80:D1:8F:84:95:13:21:11:76:B6:A4:2D:31:3F:7B:A5:FB:81:C7:FC:F0:6E:76:3D:BC:99:D2:BF:10:D4:1C:9D
-```
-
-To check an installed copy with
-[AppVerifier](https://github.com/soupslurpr/AppVerifier), copy and share this
-two-line block to the app:
-
-```text
-org.phorophyte.standby
 80:D1:8F:84:95:13:21:11:76:B6:A4:2D:31:3F:7B:A5:FB:81:C7:FC:F0:6E:76:3D:BC:99:D2:BF:10:D4:1C:9D
 ```
+
+[AppVerifier](https://github.com/soupslurpr/AppVerifier) will match that
+fingerprint against the signing certificate of the installed app.
 
 Each GitHub release also includes the SHA-256 checksum of its APK. The checksum
 proves that the downloaded file matches that release; the certificate fingerprint
