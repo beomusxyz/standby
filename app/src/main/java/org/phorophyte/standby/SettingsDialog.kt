@@ -1233,7 +1233,7 @@ fun NightModeTab(
                 }
 
                 if (nightBrightnessEnabled) {
-                    val brightnessPercent = (nightBrightnessValue * 100).toInt().coerceIn(1, 100)
+                    val brightnessPercent = (nightBrightnessValue * 100).toInt().coerceIn(0, 100)
                     Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1261,7 +1261,7 @@ fun NightModeTab(
                                 onNightBrightnessValueChange(newValue)
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             },
-                            valueRange = 0.01f..0.50f,
+                            valueRange = 0f..0.50f,
                             colors = SliderDefaults.colors(
                                 activeTrackColor = MaterialTheme.colorScheme.primary,
                                 inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
@@ -1274,7 +1274,7 @@ fun NightModeTab(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "1% (Dim)",
+                                text = "0% (System minimum)",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

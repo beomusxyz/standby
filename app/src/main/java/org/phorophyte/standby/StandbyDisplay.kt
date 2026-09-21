@@ -132,7 +132,7 @@ fun StandbyDisplay(
     LaunchedEffect(isNightModeActive, nightBrightnessEnabled, nightBrightnessValue) {
         val layoutParams = window.attributes
         layoutParams.screenBrightness = if (isNightModeActive && nightBrightnessEnabled) {
-            nightBrightnessValue.coerceIn(0.01f, 1.0f)
+            nightBrightnessValue.coerceIn(0f, 1.0f)
         } else {
             WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
@@ -229,7 +229,7 @@ fun StandbyDisplay(
                 val effectiveProtectionRatio =
                     if (isNightModeActive) nightProtectionRatio else protectionRatio
                 val effectiveBurnInProtection = burnInProtectionEnabled || isNightModeActive
-                if (effectiveBurnInProtection && isInactive) {
+                if (effectiveBurnInProtection && (isInactive || isNightModeActive)) {
                     PixelPerfectBurnInMask(
                         modifier = Modifier.fillMaxSize(),
                         protectionRatio = effectiveProtectionRatio,
