@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +44,8 @@ fun SettingsDialog(
     serverPin: String,
     hideControlsOnIdle: Boolean,
     onHideControlsOnIdleChange: (Boolean) -> Unit,
+    timeFormat: String,
+    onTimeFormatChange: (String) -> Unit,
     lowRefreshRateEnabled: Boolean,
     onLowRefreshRateEnabledChange: (Boolean) -> Unit,
     lowRefreshRateValue: Int,
@@ -79,6 +82,17 @@ fun SettingsDialog(
     onDismissRequest: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
+
+    // Resolved once here rather than at every call site. Keyed on the configuration so a
+    // config change re-reads the system toggle instead of leaving a stale answer up.
+    val timeFormatContext = LocalContext.current
+    val timeFormatConfig = LocalConfiguration.current
+    val use24Hour = remember(timeFormat, timeFormatConfig) {
+        TimeFormat.resolveApp(
+            timeFormat,
+            android.text.format.DateFormat.is24HourFormat(timeFormatContext)
+        )
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -149,6 +163,8 @@ fun SettingsDialog(
             ) {
                 when (selectedTabIndex) {
                     0 -> GeneralSettingsTab(
+                        timeFormat = timeFormat,
+                        onTimeFormatChange = onTimeFormatChange,
                         burnInProtectionEnabled = burnInProtectionEnabled,
                         onBurnInProtectionEnabledChange = onBurnInProtectionEnabledChange,
                         delayAfterInteraction = delayAfterInteraction,
@@ -173,6 +189,7 @@ fun SettingsDialog(
                         onAppWidgetsEnabledChange = onAppWidgetsEnabledChange
                     )
                     1 -> NightModeTab(
+                        use24Hour = use24Hour,
                         nightModeEnabled = nightModeEnabled,
                         onNightModeEnabledChange = onNightModeEnabledChange,
                         nightStartHour = nightStartHour,
@@ -190,6 +207,7 @@ fun SettingsDialog(
                         isNightModeActive = isNightModeActive
                     )
                     else -> ProviderSettingsTab(
+                        use24Hour = use24Hour,
                         weatherLat = weatherLat,
                         weatherLon = weatherLon,
                         weatherCity = weatherCity,
@@ -208,6 +226,8 @@ fun SettingsDialog(
 
 @Composable
 fun GeneralSettingsTab(
+    timeFormat: String,
+    onTimeFormatChange: (String) -> Unit,
     burnInProtectionEnabled: Boolean,
     onBurnInProtectionEnabledChange: (Boolean) -> Unit,
     delayAfterInteraction: Boolean,
@@ -445,6 +465,42 @@ fun GeneralSettingsTab(
                     )
                 }
                 
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Clock Format",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Applies to the app. Plugins follow it unless they set their own.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        TimeFormat.APP_OPTIONS.forEachIndexed { index, option ->
+                            SegmentedButton(
+                                selected = timeFormat == option,
+                                onClick = { onTimeFormatChange(option) },
+                                shape = SegmentedButtonDefaults.itemShape(
+                                    index = index,
+                                    count = TimeFormat.APP_OPTIONS.size
+                                )
+                            ) {
+                                Text(
+                                    when (option) {
+                                        TimeFormat.TWELVE -> "12 hour"
+                                        TimeFormat.TWENTY_FOUR -> "24 hour"
+                                        else -> "System"
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 
                 // display refresh rate
@@ -796,6 +852,7 @@ fun GeneralSettingsTab(
 
 @Composable
 fun NightModeTab(
+    use24Hour: Boolean,
     nightModeEnabled: Boolean,
     onNightModeEnabledChange: (Boolean) -> Unit,
     nightStartHour: Int,
@@ -956,7 +1013,7 @@ fun NightModeTab(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = formatTime(nightStartHour, nightStartMinute),
+                                    text = formatTime(nightStartHour, nightStartMinute, use24Hour),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1001,7 +1058,7 @@ fun NightModeTab(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = formatTime(nightEndHour, nightEndMinute),
+                                    text = formatTime(nightEndHour, nightEndMinute, use24Hour),
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1218,6 +1275,7 @@ fun NightModeTab(
 
     if (showStartTimePicker) {
         TimeSelectionDialog(
+            use24Hour = use24Hour,
             title = "Set Night Start Time",
             initialHour = nightStartHour,
             initialMinute = nightStartMinute,
@@ -1231,6 +1289,7 @@ fun NightModeTab(
 
     if (showEndTimePicker) {
         TimeSelectionDialog(
+            use24Hour = use24Hour,
             title = "Set Wake Up Time",
             initialHour = nightEndHour,
             initialMinute = nightEndMinute,
@@ -1246,6 +1305,7 @@ fun NightModeTab(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimeSelectionDialog(
+    use24Hour: Boolean,
     title: String,
     initialHour: Int,
     initialMinute: Int,
@@ -1255,7 +1315,7 @@ fun TimeSelectionDialog(
     val timePickerState = rememberTimePickerState(
         initialHour = initialHour,
         initialMinute = initialMinute,
-        is24Hour = false
+        is24Hour = use24Hour
     )
 
     AlertDialog(
@@ -1292,7 +1352,8 @@ fun TimeSelectionDialog(
     )
 }
 
-private fun formatTime(hour: Int, minute: Int): String {
+private fun formatTime(hour: Int, minute: Int, use24Hour: Boolean): String {
+    if (use24Hour) return String.format("%02d:%02d", hour, minute)
     val amPm = if (hour >= 12) "PM" else "AM"
     val displayHour = when {
         hour == 0 -> 12
@@ -1304,6 +1365,7 @@ private fun formatTime(hour: Int, minute: Int): String {
 
 @Composable
 fun ProviderSettingsTab(
+    use24Hour: Boolean,
     weatherLat: String,
     weatherLon: String,
     weatherCity: String,
@@ -1443,7 +1505,8 @@ fun ProviderSettingsTab(
                 
                 if (weatherLastUpdate > 0L) {
                     val locale = LocalConfiguration.current.locales[0]
-                    val formattedTime = java.text.SimpleDateFormat("hh:mm a", locale).format(java.util.Date(weatherLastUpdate))
+                    val formattedTime = java.text.SimpleDateFormat(TimeFormat.pattern(use24Hour), locale)
+                        .format(java.util.Date(weatherLastUpdate))
                     Text(
                         text = "Last updated: $formattedTime",
                         style = MaterialTheme.typography.bodySmall,
@@ -1483,6 +1546,8 @@ fun SettingsDialogPreview() {
         serverPort = 8080,
         serverPin = "1234",
         hideControlsOnIdle = true,
+        timeFormat = TimeFormat.SYSTEM,
+        onTimeFormatChange = {},
         onHideControlsOnIdleChange = {},
         lowRefreshRateEnabled = true,
         onLowRefreshRateEnabledChange = {},

@@ -141,6 +141,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
     val delayAfterInteraction by viewModel.delayAfterInteraction.collectAsState()
     val protectionRatio by viewModel.protectionRatio.collectAsState()
     val hideControlsOnIdle by viewModel.hideControlsOnIdle.collectAsState()
+    val timeFormat by viewModel.timeFormat.collectAsState()
     val lowRefreshRateEnabled by viewModel.lowRefreshRateEnabled.collectAsState()
     val lowRefreshRateValue by viewModel.lowRefreshRateValue.collectAsState()
 
@@ -481,6 +482,8 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                 serverPin = serverPin,
                 hideControlsOnIdle = hideControlsOnIdle,
                 onHideControlsOnIdleChange = { viewModel.setHideControlsOnIdle(it) },
+                timeFormat = timeFormat,
+                onTimeFormatChange = { viewModel.setTimeFormat(it) },
                 lowRefreshRateEnabled = lowRefreshRateEnabled,
                 onLowRefreshRateEnabledChange = { viewModel.setLowRefreshRateEnabled(it) },
                 lowRefreshRateValue = lowRefreshRateValue,

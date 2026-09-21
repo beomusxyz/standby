@@ -41,6 +41,7 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
     val burnInProtectionEnabled: StateFlow<Boolean> = settings.burnInProtectionEnabled
     val delayAfterInteraction: StateFlow<Boolean> = settings.delayAfterInteraction
     val protectionRatio: StateFlow<Int> = settings.protectionRatio
+    val timeFormat: StateFlow<String> = settings.timeFormat
     val hideControlsOnIdle: StateFlow<Boolean> = settings.hideControlsOnIdle
     val lowRefreshRateEnabled: StateFlow<Boolean> = settings.lowRefreshRateEnabled
     val lowRefreshRateValue: StateFlow<Int> = settings.lowRefreshRateValue
@@ -589,6 +590,8 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
     fun setDelayAfterInteraction(enabled: Boolean) = settings.setDelayAfterInteraction(enabled)
 
     fun setProtectionRatio(ratio: Int) = settings.setProtectionRatio(ratio)
+
+    fun setTimeFormat(value: String) = settings.setTimeFormat(value)
 
     fun setHideControlsOnIdle(enabled: Boolean) = settings.setHideControlsOnIdle(enabled)
 

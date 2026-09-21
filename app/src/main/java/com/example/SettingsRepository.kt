@@ -95,6 +95,15 @@ class SettingsRepository(context: Context) {
     private val _lowRefreshRateValue = intFlow(KEY_LOW_REFRESH_RATE_VALUE, 60)
     val lowRefreshRateValue: StateFlow<Int> = _lowRefreshRateValue.asStateFlow()
 
+    /**
+     * `system`, `12` or `24`. Defaults to following the system, which is the only one of
+     * the three the app cannot work out from the locale. See [TimeFormat].
+     */
+    private val _timeFormat = stringFlow(KEY_TIME_FORMAT, TimeFormat.SYSTEM)
+    val timeFormat: StateFlow<String> = _timeFormat.asStateFlow()
+
+    fun setTimeFormat(value: String) = putString(KEY_TIME_FORMAT, value)
+
     fun setBurnInProtectionEnabled(enabled: Boolean) = putBoolean(KEY_BURN_IN_PROTECTION, enabled)
     fun setDelayAfterInteraction(enabled: Boolean) = putBoolean(KEY_DELAY_AFTER_INTERACTION, enabled)
     fun setProtectionRatio(ratio: Int) = putInt(KEY_PROTECTION_RATIO, ratio)
@@ -203,6 +212,9 @@ class SettingsRepository(context: Context) {
     private fun putFloat(key: String, value: Float) =
         prefs.edit().putFloat(key, value).apply()
 
+    private fun putString(key: String, value: String) =
+        prefs.edit().putString(key, value).apply()
+
     companion object {
         const val PREFS_NAME = "standby_settings"
 
@@ -216,6 +228,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_HIDE_CONTROLS_ON_IDLE = "hide_controls_on_idle"
         private const val KEY_LOW_REFRESH_RATE_ENABLED = "low_refresh_rate_enabled"
         private const val KEY_LOW_REFRESH_RATE_VALUE = "low_refresh_rate_value"
+        private const val KEY_TIME_FORMAT = "time_format"
 
         private const val KEY_NIGHT_MODE_ENABLED = "night_mode_enabled"
         private const val KEY_NIGHT_START_HOUR = "night_mode_start_hour"
