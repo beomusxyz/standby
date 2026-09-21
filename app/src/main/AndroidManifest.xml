@@ -4,6 +4,18 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Optional and requested at the toggle, not at launch. Weather works without it
+         from a typed city or the IP lookup; this only exists so "use my location" can
+         do what it says. Coarse only: the forecast is for a whole city, so a street
+         address would be precision we have no use for. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- targetSdk 37 blocks the local network by default, inbound TCP included, so the
+         plugin upload server cannot accept a connection without this. Shows up as
+         "Nearby devices" in settings because that is the group it landed in. Older
+         versions do not know the name and ignore it. -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
     <uses-permission
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />

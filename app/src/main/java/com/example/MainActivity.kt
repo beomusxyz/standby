@@ -174,6 +174,16 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
         }
     )
 
+    // targetSdk 37 blocks local network traffic until ACCESS_LOCAL_NETWORK is granted,
+    // and that includes accepting an inbound connection. Without it the upload server
+    // binds a socket happily and then sits there unreachable from the LAN, which looks
+    // exactly like a bug in the server. Asked at the toggle rather than on launch,
+    // because the server is off by default and most people never switch it on.
+    val localNetworkPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted -> viewModel.setServerEnabled(isGranted) }
+    )
+
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showCustomizationDialog by remember { mutableStateOf(false) }
     var showLayoutsDialog by remember { mutableStateOf(false) }
@@ -451,7 +461,21 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                 protectionRatio = protectionRatio,
                 onProtectionRatioChange = { viewModel.setProtectionRatio(it) },
                 serverEnabled = isServerRunning,
-                onServerEnabledChange = { viewModel.setServerEnabled(it) },
+                onServerEnabledChange = { enabled ->
+                    val needsLocalNetwork = enabled &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                        androidx.core.content.ContextCompat.checkSelfPermission(
+                            context,
+                            android.Manifest.permission.ACCESS_LOCAL_NETWORK
+                        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (needsLocalNetwork) {
+                        localNetworkPermissionLauncher.launch(
+                            android.Manifest.permission.ACCESS_LOCAL_NETWORK
+                        )
+                    } else {
+                        viewModel.setServerEnabled(enabled)
+                    }
+                },
                 serverIp = serverIp,
                 serverPort = serverPort,
                 serverPin = serverPin,
