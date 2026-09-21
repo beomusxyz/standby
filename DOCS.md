@@ -65,11 +65,55 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
 | `description` | String | Brief description of the widget. |
 | `author` | String | Developer name or organization. |
 | `version` | String | Semantic version string (e.g., `"1.0.0"`). |
-| `size` | String | Widget width layout: `"half"` (takes up half the screen alongside another widget) or `"full"` (takes up the entire screen). |
+| `size` | String | Layout eligibility: `"half"` can share a page with another half plugin; `"full"` takes a page by itself. See [Layout size and orientation](#layout-size-and-orientation). |
 | `permissions` | Array | Declares requested hardware permissions (see [Sensors](#5-native-sensor-bridge-windowandroidsensors)). |
 | `providers` | Array | Declares requested external data providers (see [Providers](#6-native-provider-bridge-windowandroidproviders)). |
 | `network_whitelist` | Array | Allowed domains. External HTTP requests to domains not in this list are automatically blocked. |
-| `min_app_version` | Integer | Minimum Android client app versionCode needed to support the plugin. |
+| `min_app_version` | Integer | Reserved compatibility metadata. The current app parses and stores it but does not enforce it. See [`min_app_version` does not block installation](#min_app_version-does-not-block-installation). |
+
+### Layout size and orientation
+
+`size` decides which page layouts can offer the plugin. It does not give the plugin a fixed aspect ratio.
+
+| Page | Phone position | Plugin viewport |
+| :--- | :--- | :--- |
+| Full | Landscape or portrait | Whole page |
+| Half | Landscape | Half the page width and all of its height |
+| Half | Portrait | All of the page width and half of its height |
+
+The screen saver follows the phone's position. A half page puts its two plugins side by side when the page is wider than tall and stacks them when it is taller than wide. Rotating the phone changes the WebView size without changing the manifest.
+
+Write the page for the box it receives. CSS media queries see the plugin's viewport, which may have the opposite orientation from the phone. Aspect-ratio queries are less ambiguous:
+
+```css
+.widget {
+  display: flex;
+  gap: clamp(0.5rem, 2vmin, 1.5rem);
+}
+
+@media (min-aspect-ratio: 1/1) {
+  .widget { flex-direction: row; }
+}
+
+@media (max-aspect-ratio: 1/1) {
+  .widget { flex-direction: column; }
+}
+```
+
+Use `vmin`, percentages, `clamp()`, and `aspect-ratio` instead of assuming a pixel size. Test full, half-landscape, and half-portrait layouts. Absolutely positioned elements are usually the first ones to break.
+
+### `min_app_version` does not block installation
+
+The current app does not compare `min_app_version` with its own `versionCode`. A value higher than the installed app version does not stop import, show a warning, or disable the plugin. It is metadata for a future compatibility check.
+
+Use `1` for current plugins. If a plugin depends on a bridge method that may be absent, check for the method and provide a fallback:
+
+```javascript
+if (window.AndroidSensors &&
+    typeof window.AndroidSensors.getTimeFormat === "function") {
+  // Safe to call on this host.
+}
+```
 
 ---
 
@@ -89,12 +133,12 @@ To let users customize colors, toggles, or numerical limits directly from the An
     "default": "#D0BCFF",
     "target": "css"
   },
-  "show-seconds": {
+  "showSeconds": {
     "type": "boolean",
     "default": "false",
     "target": "js"
   },
-  "max-items": {
+  "maxItems": {
     "type": "number",
     "default": "10",
     "target": "js"
@@ -144,10 +188,30 @@ window.variableName = escapedValue;
 ```
 Inside your JavaScript, access them directly:
 ```javascript
-if (window.show-seconds) {
+if (window.showSeconds) {
   // Render seconds
 }
 ```
+
+The customization name must be a valid bare JavaScript identifier when `target` is `"js"`. Use `showSeconds`, `show_seconds`, or `MAX_ITEMS`. Do not use `show-seconds`: the host would generate `window.show-seconds`, which is a syntax error. All assignments run in one script, so one invalid name prevents every customization from being applied and prevents `onCustomizationChanged` from running.
+
+Hyphens are fine for CSS targets because the host passes those names to `style.setProperty()` instead of writing JavaScript property syntax.
+
+### Startup Timing
+
+JavaScript and CSS values are injected in `onPageFinished`, after the plugin's inline scripts have run. Define safe defaults in the page. If startup code needs the saved values immediately, pull the synchronous snapshot from the bridge:
+
+```javascript
+let showSeconds = false;
+
+if (window.AndroidSensors &&
+    typeof window.AndroidSensors.getCustomizations === "function") {
+  const saved = JSON.parse(window.AndroidSensors.getCustomizations());
+  showSeconds = saved.showSeconds ?? showSeconds;
+}
+```
+
+The callback below still handles the initial post-load injection and later changes. Settings belong to an installed plugin copy, so two pages using the same installed copy share them.
 
 ### Real-Time Update Callback
 When a user updates customizations, the app updates the styles or variables on the fly without reloading the page. You can listen for these changes dynamically by implementing:
@@ -157,8 +221,8 @@ window.onCustomizationChanged = function(updatedValues) {
   // updatedValues is a JSON object mapping customization names to their new values
   console.log("Updated values received:", updatedValues);
   
-  if (updatedValues["show-seconds"] !== undefined) {
-    toggleSecondsDisplay(updatedValues["show-seconds"]);
+  if (updatedValues.showSeconds !== undefined) {
+    toggleSecondsDisplay(updatedValues.showSeconds);
   }
 };
 ```
