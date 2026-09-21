@@ -14,6 +14,8 @@ The main difference between similar standby mode apps on the Play Store is that 
 
 
 ## Install
+Requires Android 13 or newer.
+
 1. Download the latest [release APK](https://github.com/Haxintosh/standby/releases)   
 2. Tap on the downloaded APK
 3. If needed, allow installation from browser  

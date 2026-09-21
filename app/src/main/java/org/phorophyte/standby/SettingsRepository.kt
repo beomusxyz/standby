@@ -29,7 +29,7 @@ class SettingsRepository(context: Context) {
      * The split is for backup. Android's backup rules exclude SharedPreferences a whole
      * file at a time, never per key, so "back up their settings but not their
      * coordinates" is only expressible as two files. Excluded from backup in
-     * res/xml/backup_rules.xml and res/xml/data_extraction_rules.xml.
+     * res/xml/data_extraction_rules.xml.
      */
     private val devicePrefs: SharedPreferences =
         context.applicationContext.getSharedPreferences(DEVICE_PREFS_NAME, Context.MODE_PRIVATE)

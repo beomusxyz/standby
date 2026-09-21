@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  API 31+. Same intent as res/xml/backup_rules.xml, applied to both transports:
-  cloud-backup covers Google's backup and Seedvault, device-transfer covers a direct
-  phone-to-phone move. Neither should carry coordinates or a cached forecast.
+  Applied to both transports: cloud-backup covers Android backup and Seedvault,
+  device-transfer covers a direct phone-to-phone move. Neither should carry coordinates
+  or a cached forecast.
 -->
 <data-extraction-rules>
     <cloud-backup>
