@@ -5,6 +5,10 @@ import android.content.SharedPreferences
 object DefaultPlugins {
     fun getBuiltInClockPlugin(prefs: SharedPreferences): PluginModel {
         val clockColor = prefs.getString("builtin_customization_com.example.builtin.clock_clockColor", "#D0BCFF") ?: "#D0BCFF"
+        val timeFormat = prefs.getString(
+            "builtin_customization_com.example.builtin.clock_${TimeFormat.PLUGIN_KEY}",
+            TimeFormat.INHERIT
+        ) ?: TimeFormat.INHERIT
         val clockName = prefs.getString("builtin_name_com.example.builtin.clock", "Default Clock") ?: "Default Clock"
         
         return PluginModel(
@@ -25,6 +29,13 @@ object DefaultPlugins {
                     default = "#D0BCFF",
                     target = "css",
                     value = clockColor
+                ),
+                TimeFormat.PLUGIN_KEY to CustomizationOption(
+                    type = "enum",
+                    default = TimeFormat.INHERIT,
+                    target = "js",
+                    value = timeFormat,
+                    options = TimeFormat.PLUGIN_OPTIONS
                 )
             ),
             isBuiltIn = true
@@ -139,7 +150,15 @@ object DefaultPlugins {
 
       if (window.AndroidSensors) {
         // get sensor data
-        timeEl.innerText = window.AndroidSensors.getFormattedTime("HH:mm");
+        // Ask rather than assume. getTimeFormat resolves this plugin's own override,
+        // then the app setting, then the system's 12/24 toggle.
+        var use24 = true;
+        try {
+          if (typeof window.AndroidSensors.getTimeFormat === 'function') {
+            use24 = window.AndroidSensors.getTimeFormat() === "24";
+          }
+        } catch (e) {}
+        timeEl.innerText = window.AndroidSensors.getFormattedTime(use24 ? "HH:mm" : "h:mm a");
 
         let batteryLvl = 50;
         try {
@@ -163,7 +182,8 @@ object DefaultPlugins {
           document.body.classList.remove("low-battery");
         }
       } else {
-        timeEl.innerText = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        // No bridge means a desktop preview, where the locale default is all there is.
+        timeEl.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         batteryFillEl.style.width = '50%';
       }
     }
