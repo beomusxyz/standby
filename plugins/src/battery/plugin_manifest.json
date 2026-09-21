@@ -7,5 +7,6 @@
   "size": "half",
   "permissions": ["battery"],
   "network_whitelist": [],
+  "privacy_note": "Reads battery status from the app bridge. It runs offline and does not send that data anywhere.",
   "min_app_version": 1
 }

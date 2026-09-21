@@ -12,5 +12,6 @@
   "network_whitelist": [
     "string (allowed domain, e.g., 'api.example.com')"
   ],
+  "privacy_note": "string (plain-language summary of data read, stored, or sent)",
   "min_app_version": "integer (reserved compatibility metadata; currently use 1)"
 }

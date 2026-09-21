@@ -156,8 +156,8 @@
 </div>
 
 <script>
-    const API_KEY = 'T3IGKOL49HD24XX0';
-        const SYMBOL = 'GOOGL';
+    let API_KEY = 'Insert your AlphaVantage API key';
+    let SYMBOL = 'IBM';
 
     const companyNames = {
         'AAPL': 'Apple Inc.',
@@ -167,7 +167,31 @@
         'TSLA': 'Tesla Inc.'
     };
 
+    function applyCustomizations(changes) {
+        if (typeof changes.API_KEY === 'string') API_KEY = changes.API_KEY;
+        if (typeof changes.SYMBOL === 'string') SYMBOL = changes.SYMBOL;
+    }
+
+    if (window.AndroidSensors && typeof window.AndroidSensors.getCustomizations === 'function') {
+        try {
+            applyCustomizations(JSON.parse(window.AndroidSensors.getCustomizations()));
+        } catch (error) {
+            console.error('Failed reading Stock customizations:', error);
+        }
+    }
+
+    window.onCustomizationChanged = (changes) => {
+        const previousKey = API_KEY;
+        const previousSymbol = SYMBOL;
+        applyCustomizations(changes);
+        if (API_KEY !== previousKey || SYMBOL !== previousSymbol) fetchStockData();
+    };
+
     async function fetchStockData() {
+        if (!API_KEY || API_KEY === 'Insert your AlphaVantage API key') {
+            document.getElementById('currentPrice').innerText = 'KEY';
+            return;
+        }
         const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${SYMBOL}&apikey=${API_KEY}`;
 
         try {

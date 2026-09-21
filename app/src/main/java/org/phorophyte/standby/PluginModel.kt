@@ -12,6 +12,7 @@ data class PluginModel(
     val permissions: List<String>,
     val providers: List<String> = emptyList(),
     val networkWhitelist: List<String>,
+    val privacyNote: String = "",
     val minAppVersion: Int,
     val directoryPath: String?, // null if built-in
     val htmlContent: String,
@@ -45,6 +46,7 @@ data class PendingPluginImport(
     val permissions: List<String>,
     val providers: List<String> = emptyList(),
     val networkWhitelist: List<String>,
+    val privacyNote: String = "",
     val minAppVersion: Int,
     val isZip: Boolean,
     val tempDir: java.io.File,

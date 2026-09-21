@@ -46,7 +46,7 @@ class SensorBridgeTest {
         val alarmObj = JSONObject(bridgeNoPerms.getNextAlarm())
         assertEquals(false, alarmObj.getBoolean("hasAlarm"))
         assertEquals(0L, alarmObj.getLong("triggerTime"))
-        assertTrue(alarmObj.isNull("creatorPackage"))
+        assertFalse(alarmObj.has("creatorPackage"))
         assertEquals("", alarmObj.getString("formattedTime"))
 
         val providerNoPerms = ProviderBridge(context, emptyList())
@@ -102,7 +102,7 @@ class SensorBridgeTest {
         // Should query AlarmManager and return next alarm (which is null in test env) without crashing
         assertFalse(alarmObj.getBoolean("hasAlarm"))
         assertEquals(0L, alarmObj.getLong("triggerTime"))
-        assertTrue(alarmObj.isNull("creatorPackage"))
+        assertFalse(alarmObj.has("creatorPackage"))
         assertEquals("", alarmObj.getString("formattedTime"))
     }
 

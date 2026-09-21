@@ -239,7 +239,7 @@ class SensorBridge(
 
     @JavascriptInterface
     fun getNextAlarm(): String {
-        val fallbackValue = "{\"hasAlarm\":false,\"triggerTime\":0,\"creatorPackage\":null,\"formattedTime\":\"\"}"
+        val fallbackValue = "{\"hasAlarm\":false,\"triggerTime\":0,\"formattedTime\":\"\"}"
         if (!allowedPermissions.contains("alarms")) {
             Log.w("SensorBridge", "Blocked access to next alarm: Permission not declared in manifest")
             return fallbackValue
@@ -252,8 +252,6 @@ class SensorBridge(
         }
 
         val triggerTime = nextAlarm.triggerTime
-        val creatorPackage = nextAlarm.showIntent?.creatorPackage
-
         val formattedTime = try {
             SimpleDateFormat(TimeFormat.pattern(use24HourProvider()), Locale.getDefault())
                 .format(Date(triggerTime))
@@ -264,7 +262,6 @@ class SensorBridge(
         val jsonObj = org.json.JSONObject()
         jsonObj.put("hasAlarm", true)
         jsonObj.put("triggerTime", triggerTime)
-        jsonObj.put("creatorPackage", creatorPackage ?: org.json.JSONObject.NULL)
         jsonObj.put("formattedTime", formattedTime)
         return jsonObj.toString()
     }

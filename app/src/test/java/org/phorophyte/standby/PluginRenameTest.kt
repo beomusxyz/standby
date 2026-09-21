@@ -43,6 +43,7 @@ class PluginRenameTest {
             put("author", "Tester")
             put("version", "1.0.0")
             put("orientation", "landscape")
+            put("privacy_note", "Runs offline.")
             put("permissions", org.json.JSONArray())
         }
         manifestFile.writeText(initialManifest.toString(2))
@@ -77,5 +78,6 @@ class PluginRenameTest {
         assertNotNull(loaded)
         assertEquals("New Plugin Name", loaded?.name)
         assertEquals(PluginOrientation.LANDSCAPE, loaded?.orientation)
+        assertEquals("Runs offline.", loaded?.privacyNote)
     }
 }

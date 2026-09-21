@@ -94,12 +94,6 @@
         </div>
 
         <script>
-            const isSundayStart = true;
-            let startOfWeek = "Monday";
-            if (isSundayStart) {
-                startOfWeek = "Sunday";
-            }
-
             const grid = document.getElementById("calendar-grid");
             const monthHeader = document.getElementById("month-name");
 
@@ -122,6 +116,9 @@
                 "November",
                 "December",
             ];
+            function renderCalendar(isSundayStart) {
+            const startOfWeek = isSundayStart ? "Sunday" : "Monday";
+            grid.replaceChildren();
             monthHeader.textContent = monthNames[currentMonth];
 
             const daysOfWeek =
@@ -194,6 +191,25 @@
 
                 grid.appendChild(dayElement);
             }
+            }
+
+            let isSundayStart = true;
+            if (window.AndroidSensors && typeof window.AndroidSensors.getCustomizations === "function") {
+                try {
+                    const saved = JSON.parse(window.AndroidSensors.getCustomizations());
+                    if (typeof saved.isSundayStart === "boolean") isSundayStart = saved.isSundayStart;
+                } catch (error) {
+                    console.error("Failed reading Calendar customizations:", error);
+                }
+            }
+            renderCalendar(isSundayStart);
+
+            window.onCustomizationChanged = (changes) => {
+                if (typeof changes.isSundayStart === "boolean") {
+                    isSundayStart = changes.isSundayStart;
+                    renderCalendar(isSundayStart);
+                }
+            };
         </script>
     </body>
 </html>

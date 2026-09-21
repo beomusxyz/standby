@@ -8,5 +8,6 @@
   "permissions": [],
   "providers": ["weather"],
   "network_whitelist": [],
+  "privacy_note": "Reads cached weather from the app, including the forecast location. It has no direct network access.",
   "min_app_version": 1
 }

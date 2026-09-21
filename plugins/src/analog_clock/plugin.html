@@ -157,6 +157,20 @@
     const minuteHand = document.getElementById('minute');
     const secondHand = document.getElementById('second');
 
+    function updateSecondHandVisibility(changes) {
+      secondHand.style.visibility = changes.showSeconds === false ? 'hidden' : 'visible';
+    }
+
+    if (window.AndroidSensors && typeof window.AndroidSensors.getCustomizations === 'function') {
+      try {
+        updateSecondHandVisibility(JSON.parse(window.AndroidSensors.getCustomizations()));
+      } catch (error) {
+        console.error('Failed reading Analog Clock customizations:', error);
+      }
+    }
+
+    window.onCustomizationChanged = updateSecondHandVisibility;
+
     // Generate ticks and numbers
     for (let i = 1; i <= 60; i++) {
       // Ticks

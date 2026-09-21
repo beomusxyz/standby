@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.io.File
+import org.phorophyte.standby.ui.theme.MyApplicationTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -177,6 +178,34 @@ fun ImportConfirmationDialog(
                         .verticalScroll(rightScrollState),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Privacy note",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = pendingImport.privacyNote.ifBlank {
+                                    "Plugin author did not provide a privacy note."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+
                     // perms
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -402,7 +431,7 @@ fun DetailRow(label: String, value: String) {
 @Preview(device = "spec:parent=pixel_9,orientation=landscape", showBackground = true)
 @Composable
 fun PreviewImportConfirmationDialog() {
-    MaterialTheme {
+    MyApplicationTheme(darkTheme = true) {
         ImportConfirmationDialog(
             pendingImport = PendingPluginImport(
                 name = "veryveryeverylongnametotestthingsouthelloworldisthislongenough?probablynot123.d;,lmfr",
@@ -413,6 +442,7 @@ fun PreviewImportConfirmationDialog() {
                 permissions = listOf("battery", "sensor"),
                 providers = listOf("weather"),
                 networkWhitelist = listOf("api.github.com", "metrics.honking.goose"),
+                privacyNote = "Reads cached weather and sends requests to the listed hosts.",
                 minAppVersion = 1000,
                 isZip = true,
                 tempDir = File("/mock/path"),

@@ -152,6 +152,7 @@ object PluginManager {
                 }
             }
 
+            val privacyNote = manifestJson.optString("privacy_note", "")
             val minAppVersion = manifestJson.optInt("min_app_version", 1)
 
             val htmlFile = File(pluginDir, "plugin.html")
@@ -190,6 +191,7 @@ object PluginManager {
                 permissions = permissions,
                 providers = providers,
                 networkWhitelist = networkWhitelist,
+                privacyNote = privacyNote,
                 minAppVersion = minAppVersion,
                 directoryPath = pluginDir.absolutePath,
                 htmlContent = htmlContent,
@@ -275,6 +277,7 @@ object PluginManager {
                 }
             }
 
+            val privacyNote = manifestJson.optString("privacy_note", "")
             val minAppVersion = manifestJson.optInt("min_app_version", 1)
 
             return PendingPluginImport(
@@ -287,6 +290,7 @@ object PluginManager {
                 permissions = permissions,
                 providers = providers,
                 networkWhitelist = networkWhitelist,
+                privacyNote = privacyNote,
                 minAppVersion = minAppVersion,
                 isZip = true,
                 tempDir = tempDir,
@@ -320,6 +324,7 @@ object PluginManager {
                 permissions = listOf("battery"),
                 providers = emptyList(),
                 networkWhitelist = emptyList(),
+                privacyNote = "Imported HTML plugins may run arbitrary JavaScript. Read their source before importing.",
                 minAppVersion = 1,
                 isZip = false,
                 tempDir = tempDir,
@@ -363,6 +368,7 @@ object PluginManager {
                         pending.providers.forEach { put(it) }
                     })
                     put("network_whitelist", JSONArray())
+                    put("privacy_note", pending.privacyNote)
                     put("min_app_version", pending.minAppVersion)
                 }
                 manifestFile.writeText(manifestObj.toString(2))

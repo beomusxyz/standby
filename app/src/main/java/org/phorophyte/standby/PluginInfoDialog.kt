@@ -15,9 +15,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.phorophyte.standby.ui.theme.MyApplicationTheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -285,6 +287,34 @@ fun PluginInfoDialog(
                         .verticalScroll(rightScrollState),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Privacy note",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = plugin.privacyNote.ifBlank {
+                                    "Plugin author did not provide a privacy note."
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White
+                            )
+                        }
+                    }
+
                     // Permissions & Sensor Access
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -491,8 +521,9 @@ fun PluginInfoDialog(
 @Preview(device = "spec:width=4000px,height=2424px")
 @Composable
 fun PluginInfoDialogPreview() {
-    PluginInfoDialog(
-        plugin = PluginModel(
+    MyApplicationTheme(darkTheme = true) {
+        PluginInfoDialog(
+            plugin = PluginModel(
             localId = "com.example.weather",
             manifestId = "com.example.weather",
             name = "Weather Widget",
@@ -503,12 +534,14 @@ fun PluginInfoDialogPreview() {
             permissions = listOf("battery"),
             providers = listOf("weather"),
             networkWhitelist = listOf("api.open-meteo.com"),
+            privacyNote = "Reads cached weather and sends requests to api.open-meteo.com.",
             minAppVersion = 1,
             directoryPath = "/plugins/weather",
             htmlContent = "<html></html>",
-            isBuiltIn = false
-        ),
-        onRenamePlugin = { _, _ -> },
-        onDismissRequest = {}
-    )
+                isBuiltIn = false
+            ),
+            onRenamePlugin = { _, _ -> },
+            onDismissRequest = {}
+        )
+    }
 }

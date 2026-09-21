@@ -53,6 +53,7 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
   "network_whitelist": [
     "api.open-meteo.com"
   ],
+  "privacy_note": "Reads your next alarm and cached weather. Sends requests only to api.open-meteo.com.",
   "min_app_version": 1
 }
 ```
@@ -71,7 +72,13 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
 | `permissions` | Array | Declares requested hardware permissions (see [Sensors](#5-native-sensor-bridge-windowandroidsensors)). |
 | `providers` | Array | Declares requested external data providers (see [Providers](#6-native-provider-bridge-windowandroidproviders)). |
 | `network_whitelist` | Array | Allowed domains. External HTTP requests to domains not in this list are automatically blocked. |
+| `privacy_note` | String | Plain-language summary of data the plugin reads, stores, or sends. The import and plugin-information screens show this text. |
 | `min_app_version` | Integer | Reserved compatibility metadata. The current app parses and stores it but does not enforce it. See [`min_app_version` does not block installation](#min_app_version-does-not-block-installation). |
+
+Write `privacy_note` for the person installing the plugin. Name any device data,
+provider data, stored secrets, and external service involved. State plainly when
+the plugin runs offline. This note explains behavior; it does not grant access.
+The declared permissions, providers, and network whitelist remain authoritative.
 
 ### Layout size and orientation
 
@@ -315,7 +322,6 @@ Retrieves details about the next scheduled system alarm.
   {
     "hasAlarm": Boolean,
     "triggerTime": Long,       // Epoch millisecond timestamp of next alarm
-    "creatorPackage": String?, // Package name of the app that set the alarm
     "formattedTime": String    // Simple formatted time representation (e.g. "07:30 AM")
   }
   ```

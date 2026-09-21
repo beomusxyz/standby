@@ -7,5 +7,6 @@
   "size": "half",
   "permissions": [],
   "network_whitelist": ["www.alphavantage.co"],
+  "privacy_note": "Sends the selected stock symbol and your API key directly to Alpha Vantage. The app does not receive either value.",
   "min_app_version": 1
 }

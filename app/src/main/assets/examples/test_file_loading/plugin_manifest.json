@@ -7,5 +7,6 @@
   "size": "half",
   "permissions": [],
   "network_whitelist": [],
+  "privacy_note": "Runs offline and loads only bundled test assets.",
   "min_app_version": 1
 }

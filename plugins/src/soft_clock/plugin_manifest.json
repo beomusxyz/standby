@@ -8,5 +8,6 @@
   "orientation": "responsive",
   "permissions": [],
   "network_whitelist": [],
+  "privacy_note": "Runs offline and does not request device data.",
   "min_app_version": 1
 }

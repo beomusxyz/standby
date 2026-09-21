@@ -20,6 +20,7 @@ object DefaultPlugins {
             version = "1.0.0",
             permissions = listOf("battery"),
             networkWhitelist = emptyList(),
+            privacyNote = "Runs offline. It reads battery status and the current time from the app.",
             minAppVersion = 1,
             directoryPath = null,
             htmlContent = BUILT_IN_CLOCK_PLUGIN,

@@ -9,5 +9,6 @@
   "permissions": ["alarms"],
   "providers": ["weather"],
   "network_whitelist": [],
+  "privacy_note": "Reads the next alarm and cached weather from the app. It has no direct network access.",
   "min_app_version": 1
 }
