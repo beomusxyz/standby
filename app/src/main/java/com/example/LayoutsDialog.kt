@@ -17,6 +17,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -47,11 +49,15 @@ fun LayoutsDialog(
     onUpdatePageSlotPlugin: (String, Boolean, String) -> Unit, // page id, is left, new plugin id
     onUpdatePageSlotFull: (String, String) -> Unit, // page id, new plugin id
     onUpdatePageSlotType: (String, String) -> Unit, // page id, type
+    onAddStackItem: (String, Boolean) -> Unit,
+    onRemoveStackItem: (String, Boolean, Int) -> Unit,
+    onMoveStackItem: (String, Boolean, Int, Int) -> Unit,
+    onUpdateStackItem: (String, Boolean, Int, String) -> Unit,
     onDeletePlugin: (String) -> Unit, // delete plugin callback
     onImportPluginClick: () -> Unit,
     onRefreshWidgetsClick: () -> Unit = {},
     appWidgetsEnabled: Boolean = true,
-    onPickAppWidget: (pageId: String, isLeft: Boolean?) -> Unit = { _, _ -> },
+    onPickAppWidget: (pageId: String, isLeft: Boolean?, stackIndex: Int?) -> Unit = { _, _, _ -> },
     onDismissRequest: () -> Unit
 ) {
     var selectedTabIndex by remember { mutableStateOf(0) }
@@ -165,6 +171,10 @@ fun LayoutsDialog(
                         onUpdatePageSlotPlugin = onUpdatePageSlotPlugin,
                         onUpdatePageSlotFull = onUpdatePageSlotFull,
                         onUpdatePageSlotType = onUpdatePageSlotType,
+                        onAddStackItem = onAddStackItem,
+                        onRemoveStackItem = onRemoveStackItem,
+                        onMoveStackItem = onMoveStackItem,
+                        onUpdateStackItem = onUpdateStackItem,
                         appWidgetsEnabled = appWidgetsEnabled,
                         onPickAppWidget = onPickAppWidget
                     )
@@ -191,8 +201,12 @@ fun ConfigureLayoutsTab(
     onUpdatePageSlotPlugin: (String, Boolean, String) -> Unit,
     onUpdatePageSlotFull: (String, String) -> Unit,
     onUpdatePageSlotType: (String, String) -> Unit,
+    onAddStackItem: (String, Boolean) -> Unit,
+    onRemoveStackItem: (String, Boolean, Int) -> Unit,
+    onMoveStackItem: (String, Boolean, Int, Int) -> Unit,
+    onUpdateStackItem: (String, Boolean, Int, String) -> Unit,
     appWidgetsEnabled: Boolean = true,
-    onPickAppWidget: (String, Boolean?) -> Unit = { _, _ -> }
+    onPickAppWidget: (String, Boolean?, Int?) -> Unit = { _, _, _ -> }
 ) {
     val lazyListState = rememberLazyListState()
     var previousSize by remember { mutableStateOf(standbyPages.size) }
@@ -323,6 +337,7 @@ fun ConfigureLayoutsTab(
 
                                         // type switcher
                                         val isFull = page is StandbyPage.FullWidth
+                                        val isStack = page is StandbyPage.StackedHalves
                                         Row(
                                             modifier = Modifier
                                                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
@@ -341,8 +356,8 @@ fun ConfigureLayoutsTab(
                                                 Text("Full Width", style = MaterialTheme.typography.labelSmall, color = fullColor, fontWeight = FontWeight.Bold)
                                             }
 
-                                            val splitBg = if (!isFull) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
-                                            val splitColor = if (!isFull) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                            val splitBg = if (!isFull && !isStack) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                            val splitColor = if (!isFull && !isStack) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                                             Box(
                                                 modifier = Modifier
                                                     .background(splitBg, RoundedCornerShape(6.dp))
@@ -350,6 +365,17 @@ fun ConfigureLayoutsTab(
                                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                                             ) {
                                                 Text("Split Screen", style = MaterialTheme.typography.labelSmall, color = splitColor, fontWeight = FontWeight.Bold)
+                                            }
+
+                                            val stackBg = if (isStack) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                                            val stackColor = if (isStack) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(stackBg, RoundedCornerShape(6.dp))
+                                                    .clickable { onUpdatePageSlotType(page.pageId, "stack") }
+                                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                            ) {
+                                                Text("Stacks", style = MaterialTheme.typography.labelSmall, color = stackColor, fontWeight = FontWeight.Bold)
                                             }
                                         }
 
@@ -382,7 +408,7 @@ fun ConfigureLayoutsTab(
                                                     onUpdatePageSlotFull(page.pageId, newId)
                                                 },
                                                 onPickAppWidget = if (appWidgetsEnabled) {
-                                                    { onPickAppWidget(page.pageId, null) }
+                                                    { onPickAppWidget(page.pageId, null, null) }
                                                 } else null,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
@@ -402,7 +428,7 @@ fun ConfigureLayoutsTab(
                                                         onUpdatePageSlotPlugin(page.pageId, true, newId)
                                                     },
                                                     onPickAppWidget = if (appWidgetsEnabled) {
-                                                        { onPickAppWidget(page.pageId, true) }
+                                                        { onPickAppWidget(page.pageId, true, null) }
                                                     } else null,
                                                     modifier = Modifier.weight(1f)
                                                 )
@@ -415,18 +441,34 @@ fun ConfigureLayoutsTab(
                                                         onUpdatePageSlotPlugin(page.pageId, false, newId)
                                                     },
                                                     onPickAppWidget = if (appWidgetsEnabled) {
-                                                        { onPickAppWidget(page.pageId, false) }
+                                                        { onPickAppWidget(page.pageId, false, null) }
                                                     } else null,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                             }
                                         }
                                         is StandbyPage.StackedHalves -> {
-                                            Text(
-                                                text = "Stacks: ${page.leftStack.size} left, ${page.rightStack.size} right",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
+                                            val halfOptions = plugins.filter { it.size == "half" }.ifEmpty { plugins }
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                StackEditor(
+                                                    label = "Left stack", items = page.leftStack, plugins = halfOptions,
+                                                    onAdd = { onAddStackItem(page.pageId, true) },
+                                                    onRemove = { onRemoveStackItem(page.pageId, true, it) },
+                                                    onMove = { from, to -> onMoveStackItem(page.pageId, true, from, to) },
+                                                    onSelect = { index, id -> onUpdateStackItem(page.pageId, true, index, id) },
+                                                    onPickAppWidget = if (appWidgetsEnabled) { index -> onPickAppWidget(page.pageId, true, index) } else null,
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                                StackEditor(
+                                                    label = "Right stack", items = page.rightStack, plugins = halfOptions,
+                                                    onAdd = { onAddStackItem(page.pageId, false) },
+                                                    onRemove = { onRemoveStackItem(page.pageId, false, it) },
+                                                    onMove = { from, to -> onMoveStackItem(page.pageId, false, from, to) },
+                                                    onSelect = { index, id -> onUpdateStackItem(page.pageId, false, index, id) },
+                                                    onPickAppWidget = if (appWidgetsEnabled) { index -> onPickAppWidget(page.pageId, false, index) } else null,
+                                                    modifier = Modifier.weight(1f),
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -435,6 +477,82 @@ fun ConfigureLayoutsTab(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun StackEditor(
+    label: String,
+    items: List<StandbyItem>,
+    plugins: List<PluginModel>,
+    onAdd: () -> Unit,
+    onRemove: (Int) -> Unit,
+    onMove: (Int, Int) -> Unit,
+    onSelect: (Int, String) -> Unit,
+    onPickAppWidget: ((Int) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+        )
+        items.forEachIndexed { index, item ->
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                ),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    PluginDropdown(
+                        label = "",
+                        selectedItemId = item.localId,
+                        selectedItemName = item.displayName,
+                        plugins = plugins,
+                        onPluginSelected = { onSelect(index, it) },
+                        onPickAppWidget = onPickAppWidget?.let { pick -> { pick(index) } },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                    ) {
+                        IconButton(
+                            onClick = { onMove(index, index - 1) },
+                            enabled = index > 0,
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, "Move up", modifier = Modifier.size(18.dp))
+                        }
+                        IconButton(
+                            onClick = { onMove(index, index + 1) },
+                            enabled = index < items.lastIndex,
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Move down", modifier = Modifier.size(18.dp))
+                        }
+                        IconButton(
+                            onClick = { onRemove(index) },
+                            enabled = items.size > 1,
+                            modifier = Modifier.size(32.dp),
+                        ) {
+                            Icon(Icons.Default.Delete, "Remove from stack", modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
+            }
+        }
+        OutlinedButton(onClick = onAdd, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Add")
         }
     }
 }
@@ -751,6 +869,10 @@ fun LayoutsDialogPreview() {
         onUpdatePageSlotPlugin = { _, _, _ -> },
         onUpdatePageSlotFull = { _, _ -> },
         onUpdatePageSlotType = { _, _ -> },
+        onAddStackItem = { _, _ -> },
+        onRemoveStackItem = { _, _, _ -> },
+        onMoveStackItem = { _, _, _, _ -> },
+        onUpdateStackItem = { _, _, _, _ -> },
         onDeletePlugin = {},
         onImportPluginClick = {},
         onDismissRequest = {}

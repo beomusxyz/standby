@@ -211,7 +211,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
     }
 
     var showAppWidgetPicker by remember { mutableStateOf(false) }
-    var pendingAppWidgetSlot by remember { mutableStateOf<Pair<String, Boolean?>?>(null) } // pageId, isLeft
+    var pendingAppWidgetSlot by remember { mutableStateOf<Triple<String, Boolean?, Int?>?>(null) } // pageId, isLeft, stackIndex
     var pendingConfigAppWidgetId by remember { mutableStateOf<Int?>(null) }
     var pendingConfigProvider by remember { mutableStateOf<AppWidgetProviderInfo?>(null) }
     var selectedAppWidgetForInfo by remember { mutableStateOf<StandbyItem.NativeAppWidget?>(null) }
@@ -232,7 +232,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                             )
                             if (!launched) {
                                 if (slot != null) {
-                                    viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId)
+                                    viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId, slot.third)
                                 } else {
                                     viewModel.addPageSlotWithAppWidget(widgetId, "full")
                                 }
@@ -242,7 +242,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                             }
                         } else {
                             if (slot != null) {
-                                viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId)
+                                viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId, slot.third)
                             } else {
                                 viewModel.addPageSlotWithAppWidget(widgetId, "full")
                             }
@@ -262,7 +262,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                     val slot = pendingAppWidgetSlot
                     if (resultCode == Activity.RESULT_OK && widgetId != null) {
                         if (slot != null) {
-                            viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId)
+                            viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, widgetId, slot.third)
                         } else {
                             viewModel.addPageSlotWithAppWidget(widgetId, "full")
                         }
@@ -574,12 +574,18 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                 onUpdatePageSlotType = { pageId, type ->
                     viewModel.updatePageSlotType(pageId, type)
                 },
+                onAddStackItem = { pageId, isLeft -> viewModel.addStackItem(pageId, isLeft) },
+                onRemoveStackItem = { pageId, isLeft, index -> viewModel.removeStackItem(pageId, isLeft, index) },
+                onMoveStackItem = { pageId, isLeft, from, to -> viewModel.moveStackItem(pageId, isLeft, from, to) },
+                onUpdateStackItem = { pageId, isLeft, index, pluginId ->
+                    viewModel.updateStackItem(pageId, isLeft, index, pluginId)
+                },
                 appWidgetsEnabled = appWidgetsEnabled,
                 onDeletePlugin = { localId -> viewModel.deletePlugin(localId) },
                 onImportPluginClick = { filePickerLauncher.launch("*/*") },
                 onRefreshWidgetsClick = { viewModel.refreshAllWidgets(context) },
-                onPickAppWidget = { pageId, isLeft ->
-                    pendingAppWidgetSlot = Pair(pageId, isLeft)
+                onPickAppWidget = { pageId, isLeft, stackIndex ->
+                    pendingAppWidgetSlot = Triple(pageId, isLeft, stackIndex)
                     showAppWidgetPicker = true
                 },
                 onDismissRequest = { showLayoutsDialog = false }
@@ -626,7 +632,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                         if (!launched) {
                             val slot = pendingAppWidgetSlot
                             if (slot != null) {
-                                viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, appWidgetId)
+                                viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, appWidgetId, slot.third)
                             } else {
                                 viewModel.addPageSlotWithAppWidget(appWidgetId, "full")
                             }
@@ -637,7 +643,7 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
                     } else {
                         val slot = pendingAppWidgetSlot
                         if (slot != null) {
-                            viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, appWidgetId)
+                            viewModel.updatePageSlotWithAppWidget(slot.first, slot.second, appWidgetId, slot.third)
                         } else {
                             viewModel.addPageSlotWithAppWidget(appWidgetId, "full")
                         }
@@ -763,5 +769,4 @@ fun PixelPerfectBurnInMask(
         }
     }
 }
-
 

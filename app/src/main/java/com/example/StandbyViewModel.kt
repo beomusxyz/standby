@@ -448,13 +448,20 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updatePageSlotWithAppWidget(pageId: String, isLeft: Boolean?, appWidgetId: Int) {
+    fun updatePageSlotWithAppWidget(pageId: String, isLeft: Boolean?, appWidgetId: Int, stackIndex: Int? = null) {
         val context = getApplication<Application>()
         ensureLayoutConfigExists(context)
         val widgetLocalId = "appwidget:$appWidgetId"
         val layout = PluginManager.loadLayoutConfig(context).map { entry ->
             if (entry.pageId == pageId) {
-                if (isLeft == null || entry.type == "full") {
+                if (entry.type == "stack" && isLeft != null && stackIndex != null) {
+                    val items = (if (isLeft) entry.leftStack else entry.rightStack).orEmpty().toMutableList()
+                    if (stackIndex in items.indices) {
+                        cleanupAppWidgetId(context, items[stackIndex])
+                        items[stackIndex] = widgetLocalId
+                    }
+                    if (isLeft) entry.copy(leftStack = items) else entry.copy(rightStack = items)
+                } else if (isLeft == null || entry.type == "full") {
                     cleanupAppWidgetId(context, entry.pluginLocalId)
                     entry.copy(pluginLocalId = widgetLocalId)
                 } else if (isLeft) {
@@ -531,6 +538,48 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         rebuildStandbyPages()
     }
 
+    fun addStackItem(pageId: String, isLeft: Boolean) {
+        val context = getApplication<Application>()
+        val fallback = _plugins.value.firstOrNull { it.size == "half" }?.localId
+            ?: _plugins.value.firstOrNull()?.localId ?: return
+        val layout = PluginManager.loadLayoutConfig(context).map { entry ->
+            if (entry.pageId != pageId || entry.type != "stack") return@map entry
+            if (isLeft) entry.copy(leftStack = entry.leftStack.orEmpty() + fallback)
+            else entry.copy(rightStack = entry.rightStack.orEmpty() + fallback)
+        }
+        PluginManager.saveLayoutConfig(context, layout)
+        rebuildStandbyPages()
+    }
+
+    fun updateStackItem(pageId: String, isLeft: Boolean, index: Int, localId: String) =
+        changeStack(pageId, isLeft) { items ->
+            if (index in items.indices) items[index] = localId
+        }
+
+    fun removeStackItem(pageId: String, isLeft: Boolean, index: Int) =
+        changeStack(pageId, isLeft) { items ->
+            if (items.size > 1 && index in items.indices) items.removeAt(index)
+        }
+
+    fun moveStackItem(pageId: String, isLeft: Boolean, from: Int, to: Int) =
+        changeStack(pageId, isLeft) { items ->
+            if (from in items.indices && to in items.indices) items.add(to, items.removeAt(from))
+        }
+
+    private fun changeStack(pageId: String, isLeft: Boolean, change: (MutableList<String>) -> Unit) {
+        val context = getApplication<Application>()
+        val layout = PluginManager.loadLayoutConfig(context).map { entry ->
+            if (entry.pageId != pageId || entry.type != "stack") return@map entry
+            val items = (if (isLeft) entry.leftStack else entry.rightStack).orEmpty().toMutableList()
+            val before = items.toList()
+            change(items)
+            (before - items.toSet()).forEach { cleanupAppWidgetId(context, it) }
+            if (isLeft) entry.copy(leftStack = items) else entry.copy(rightStack = items)
+        }
+        PluginManager.saveLayoutConfig(context, layout)
+        rebuildStandbyPages()
+    }
+
     fun updatePageSlotFull(pageId: String, newPluginLocalId: String) {
         val context = getApplication<Application>()
         ensureLayoutConfigExists(context)
@@ -551,9 +600,16 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         val defaultHalf = installed.firstOrNull { it.size == "half" }?.localId ?: defaultFull
 
         val layout = PluginManager.loadLayoutConfig(context).map { entry ->
-            if (entry.pageId == pageId) {
-                if (newType == "full") {
-                    entry.copy(type = "full", pluginLocalId = defaultFull, leftLocalId = null, rightLocalId = null)
+            if (entry.pageId == pageId && entry.type != newType) {
+                val updated = if (newType == "full") {
+                    entry.copy(
+                        type = "full",
+                        pluginLocalId = defaultFull,
+                        leftLocalId = null,
+                        rightLocalId = null,
+                        leftStack = null,
+                        rightStack = null,
+                    )
                 } else if (newType == "stack") {
                     entry.copy(
                         type = "stack",
@@ -573,6 +629,12 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                         rightStack = null,
                     )
                 }
+                val oldItems = listOfNotNull(entry.pluginLocalId, entry.leftLocalId, entry.rightLocalId) +
+                    entry.leftStack.orEmpty() + entry.rightStack.orEmpty()
+                val keptItems = listOfNotNull(updated.pluginLocalId, updated.leftLocalId, updated.rightLocalId) +
+                    updated.leftStack.orEmpty() + updated.rightStack.orEmpty()
+                (oldItems - keptItems.toSet()).forEach { cleanupAppWidgetId(context, it) }
+                updated
             } else entry
         }
         PluginManager.saveLayoutConfig(context, layout)
