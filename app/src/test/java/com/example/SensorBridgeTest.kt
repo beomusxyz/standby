@@ -148,7 +148,7 @@ class SensorBridgeTest {
     @Test
     fun testCurrentWeatherCacheParsing() {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
 
         val mockWeatherJson = """
             {
@@ -164,7 +164,7 @@ class SensorBridgeTest {
             }
         """.trimIndent()
 
-        prefs.edit().putString("weather_cache", mockWeatherJson).commit()
+        prefs.edit().putString(SettingsRepository.KEY_WEATHER_CACHE, mockWeatherJson).commit()
 
         // write mock icon file to cache
         val cacheDir = java.io.File(context.cacheDir, "weather_icon_cache")

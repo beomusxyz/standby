@@ -25,8 +25,8 @@ class ProviderBridge(
             Log.w("ProviderBridge", "Blocked access to weather: Provider not declared in manifest")
             return fallbackValue
         }
-        val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
-        return prefs.getString("weather_cache", fallbackValue) ?: fallbackValue
+        val prefs = context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getString(SettingsRepository.KEY_WEATHER_CACHE, fallbackValue) ?: fallbackValue
     }
 
     @JavascriptInterface
@@ -36,8 +36,8 @@ class ProviderBridge(
             Log.w("ProviderBridge", "Blocked access to weather: Provider not declared in manifest")
             return fallbackValue
         }
-        val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
-        val cache = prefs.getString("weather_cache", null) ?: return fallbackValue
+        val prefs = context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
+        val cache = prefs.getString(SettingsRepository.KEY_WEATHER_CACHE, null) ?: return fallbackValue
 
         return try {
             val json = org.json.JSONObject(cache)
@@ -80,7 +80,7 @@ class ProviderBridge(
             val resolvedCity = if (!cachedCity.isNullOrBlank() && cachedCity != "Unknown") {
                 cachedCity
             } else {
-                prefs.getString("weather_city", "Berlin")?.takeIf { it.isNotBlank() && it != "Unknown" } ?: "Berlin"
+                prefs.getString(SettingsRepository.KEY_RESOLVED_CITY, SettingsRepository.DEFAULT_CITY)?.takeIf { it.isNotBlank() && it != "Unknown" } ?: SettingsRepository.DEFAULT_CITY
             }
             result.put("city", resolvedCity)
             result.put("latitude", json.optDouble("latitude", 0.0))

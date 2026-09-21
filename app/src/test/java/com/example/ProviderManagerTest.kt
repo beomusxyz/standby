@@ -64,23 +64,27 @@ class ProviderManagerTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val manager = ProviderManager(context, mockClient)
 
-        val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+        val devicePrefs =
+            context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
+        devicePrefs.edit().clear().commit()
 
-        // Set manually
+        // A city the user picked, which lives with their settings.
         prefs.edit()
-            .putString("weather_lat", "52.52")
-            .putString("weather_lon", "13.41")
+            .putString("weather_location_mode", SettingsRepository.MODE_MANUAL)
+            .putString("weather_manual_lat", "52.52")
+            .putString("weather_manual_lon", "13.41")
             .commit()
 
         manager.fetchWeather()
 
-        val cache = prefs.getString("weather_cache", null)
+        val cache = devicePrefs.getString(SettingsRepository.KEY_WEATHER_CACHE, null)
         assertNotNull(cache)
         val cachedJson = JSONObject(cache!!)
         assertEquals(52.52, cachedJson.getDouble("latitude"), 0.01)
 
-        val lastUpdate = prefs.getLong("weather_last_update", 0L)
+        val lastUpdate = devicePrefs.getLong(SettingsRepository.KEY_WEATHER_LAST_UPDATE, 0L)
         assertTrue(lastUpdate > 0L)
     }
 
@@ -109,16 +113,22 @@ class ProviderManagerTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val manager = ProviderManager(context, mockClient)
 
-        val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+        val devicePrefs =
+            context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().commit()
+        devicePrefs.edit().clear().commit()
 
         manager.fetchWeather()
 
-        assertEquals("Boston", prefs.getString("weather_city", null))
-        assertEquals("42.3601", prefs.getString("weather_lat", null))
-        assertEquals("-71.0589", prefs.getString("weather_lon", null))
+        // An IP lookup is something this device worked out, so it stays device-side and
+        // never reaches the file that gets backed up.
+        assertEquals("Boston", devicePrefs.getString(SettingsRepository.KEY_RESOLVED_CITY, null))
+        assertEquals("42.3601", devicePrefs.getString(SettingsRepository.KEY_RESOLVED_LAT, null))
+        assertEquals("-71.0589", devicePrefs.getString(SettingsRepository.KEY_RESOLVED_LON, null))
+        assertNull(prefs.getString("weather_manual_city", null))
 
-        val cache = prefs.getString("weather_cache", null)
+        val cache = devicePrefs.getString(SettingsRepository.KEY_WEATHER_CACHE, null)
         assertNotNull(cache)
         val cachedJson = JSONObject(cache!!)
         assertEquals("Boston", cachedJson.getString("city"))

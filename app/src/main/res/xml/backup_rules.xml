@@ -1,13 +1,15 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-   Sample backup rules file; uncomment and customize as necessary.
-   See https://developer.android.com/guide/topics/data/autobackup
-   for details.
-   Note: This file is ignored for devices older than API 31
-   See https://developer.android.com/about/versions/12/backup-restore
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup rules for API 24-30. res/xml/data_extraction_rules.xml covers 31+ and has to
+  say the same thing.
+
+  What the user chose is worth carrying to a new phone: their settings, their installed
+  plugins, their page layouts, the city they picked. What this device worked out is not:
+  coordinates, the resolved city name, the cached forecast.
+
+  SharedPreferences can only be included or excluded a whole file at a time, which is why
+  those live in a separate standby_device file rather than being excluded key by key.
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <exclude domain="sharedpref" path="standby_device.xml" />
 </full-backup-content>

@@ -14,7 +14,12 @@ class ProviderManager(
     private val client: OkHttpClient = OkHttpClient()
 ) {
 
-    private val prefs = context.getSharedPreferences("standby_settings", Context.MODE_PRIVATE)
+    private val prefs =
+        context.getSharedPreferences(SettingsRepository.PREFS_NAME, Context.MODE_PRIVATE)
+
+    /** Coordinates, resolved city and the cached forecast. Never backed up. */
+    private val devicePrefs =
+        context.getSharedPreferences(SettingsRepository.DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
     private var weatherJob: Job? = null
 
     data class GeocodingResult(
@@ -29,9 +34,10 @@ class ProviderManager(
         weatherJob?.cancel()
         weatherJob = scope.launch(Dispatchers.IO) {
             while (isActive) {
-                val lastUpdate = prefs.getLong("weather_last_update", 0L)
+                val lastUpdate = devicePrefs.getLong(SettingsRepository.KEY_WEATHER_LAST_UPDATE, 0L)
                 val now = System.currentTimeMillis()
-                if (now - lastUpdate >= 3600000L || prefs.getString("weather_cache", null).isNullOrBlank()) {
+                val cached = devicePrefs.getString(SettingsRepository.KEY_WEATHER_CACHE, null)
+                if (now - lastUpdate >= 3600000L || cached.isNullOrBlank()) {
                     fetchWeather()
                 }
                 delay(60000L) // check every minute
@@ -99,20 +105,28 @@ class ProviderManager(
     suspend fun fetchWeather() = withContext(Dispatchers.IO) {
         var lat: String? = null
         var lon: String? = null
+        var city: String? = null
 
-        if (prefs.getBoolean("weather_use_gps", false)) {
+        val usingCoarse = prefs.getString("weather_location_mode", SettingsRepository.MODE_MANUAL) ==
+            SettingsRepository.MODE_COARSE
+
+        if (usingCoarse) {
             val gpsLocation = getLastKnownGpsLocation()
             if (gpsLocation != null) {
                 lat = gpsLocation.first
                 lon = gpsLocation.second
-                val resolvedCity = getCityFromCoordinates(lat.toDouble(), lon.toDouble()) ?: "Current Location"
-                prefs.edit().putString("weather_city", resolvedCity).apply()
+                city = getCityFromCoordinates(lat.toDouble(), lon.toDouble()) ?: "Current Location"
+            } else {
+                // Nothing from the device this time. Whatever it resolved last is better
+                // than falling through to the IP lookup.
+                lat = devicePrefs.getString(SettingsRepository.KEY_RESOLVED_LAT, null)
+                lon = devicePrefs.getString(SettingsRepository.KEY_RESOLVED_LON, null)
+                city = devicePrefs.getString(SettingsRepository.KEY_RESOLVED_CITY, null)
             }
-        }
-
-        if (lat.isNullOrBlank() || lon.isNullOrBlank()) {
-            lat = prefs.getString("weather_lat", null)
-            lon = prefs.getString("weather_lon", null)
+        } else {
+            lat = prefs.getString("weather_manual_lat", null)
+            lon = prefs.getString("weather_manual_lon", null)
+            city = prefs.getString("weather_manual_city", null)
         }
 
         if (lat.isNullOrBlank() || lon.isNullOrBlank()) {
@@ -120,22 +134,24 @@ class ProviderManager(
             if (ipLocation != null) {
                 lat = ipLocation.first
                 lon = ipLocation.second
-                val city = ipLocation.third
-                prefs.edit()
-                    .putString("weather_lat", lat)
-                    .putString("weather_lon", lon)
-                    .putString("weather_city", city)
-                    .apply()
+                city = ipLocation.third
             }
         }
 
         if (lat.isNullOrBlank() || lon.isNullOrBlank()) {
-            // Default fallback: Berlin
-            lat = "52.52"
-            lon = "13.41"
-            if (prefs.getString("weather_city", null).isNullOrBlank()) {
-                prefs.edit().putString("weather_city", "Berlin").apply()
-            }
+            lat = SettingsRepository.DEFAULT_LAT
+            lon = SettingsRepository.DEFAULT_LON
+            if (city.isNullOrBlank()) city = SettingsRepository.DEFAULT_CITY
+        }
+
+        // What the forecast is actually for, which is device state whichever way it was
+        // arrived at. The user's own choice stays where they put it.
+        devicePrefs.edit()
+            .putString(SettingsRepository.KEY_RESOLVED_LAT, lat)
+            .putString(SettingsRepository.KEY_RESOLVED_LON, lon)
+            .apply()
+        if (!city.isNullOrBlank()) {
+            devicePrefs.edit().putString(SettingsRepository.KEY_RESOLVED_CITY, city).apply()
         }
 
         val url = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&hourly=temperature_2m,weather_code,precipitation,precipitation_probability,is_day,relative_humidity_2m,dew_point_2m,apparent_temperature,visibility,uv_index&timezone=auto"
@@ -146,15 +162,16 @@ class ProviderManager(
                     val body = response.body?.string()
                     if (!body.isNullOrBlank()) {
                         val json = JSONObject(body)
-                        val cityName = prefs.getString("weather_city", "Berlin") ?: "Berlin"
+                        val cityName = city?.takeIf { it.isNotBlank() }
+                            ?: SettingsRepository.DEFAULT_CITY
                         json.put("city", cityName)
 
                         // cache forecast icons
                         cacheForecastIcons(json)
 
-                        prefs.edit()
-                            .putString("weather_cache", json.toString())
-                            .putLong("weather_last_update", System.currentTimeMillis())
+                        devicePrefs.edit()
+                            .putString(SettingsRepository.KEY_WEATHER_CACHE, json.toString())
+                            .putLong(SettingsRepository.KEY_WEATHER_LAST_UPDATE, System.currentTimeMillis())
                             .apply()
                         Log.d("ProviderManager", "Successfully updated weather forecast")
                     }

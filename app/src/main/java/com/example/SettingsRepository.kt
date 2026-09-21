@@ -24,6 +24,17 @@ class SettingsRepository(context: Context) {
         context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     /**
+     * Everything this device worked out for itself, kept apart from what the user chose.
+     *
+     * The split is for backup. Android's backup rules exclude SharedPreferences a whole
+     * file at a time, never per key, so "back up their settings but not their
+     * coordinates" is only expressible as two files. Excluded from backup in
+     * res/xml/backup_rules.xml and res/xml/data_extraction_rules.xml.
+     */
+    private val devicePrefs: SharedPreferences =
+        context.applicationContext.getSharedPreferences(DEVICE_PREFS_NAME, Context.MODE_PRIVATE)
+
+    /**
      * Per-plugin values keyed by plugin id, like `builtin_name_<id>`, have no fixed key
      * set and are not app settings, so [DefaultPlugins] still reads them straight from
      * prefs. Exposed `internal` rather than pretending this class owns every key in the
@@ -44,7 +55,58 @@ class SettingsRepository(context: Context) {
     }
 
     init {
+        migrateLegacyWeatherKeys()
         prefs.registerOnSharedPreferenceChangeListener(listener)
+        devicePrefs.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    /**
+     * Before the split, one file held both. Coordinates the app had resolved sat next to
+     * the city the user typed, under the same keys, so there was no way to tell them
+     * apart and turning location on overwrote a manually chosen city for good.
+     *
+     * Runs once: the old keys are removed as they are moved.
+     */
+    private fun migrateLegacyWeatherKeys() {
+        if (!prefs.contains(LEGACY_KEY_LAT) &&
+            !prefs.contains(LEGACY_KEY_CITY) &&
+            !prefs.contains(LEGACY_KEY_CACHE) &&
+            !prefs.contains(LEGACY_KEY_USE_GPS) &&
+            !prefs.contains(LEGACY_KEY_SERVER_ENABLED)
+        ) return
+
+        val wasUsingGps = prefs.getBoolean(LEGACY_KEY_USE_GPS, false)
+        val lat = prefs.getString(LEGACY_KEY_LAT, null)
+        val lon = prefs.getString(LEGACY_KEY_LON, null)
+        val city = prefs.getString(LEGACY_KEY_CITY, null)
+
+        devicePrefs.edit().apply {
+            // Whatever was on disk describes this device either way, so it lands here.
+            lat?.let { putString(KEY_RESOLVED_LAT, it) }
+            lon?.let { putString(KEY_RESOLVED_LON, it) }
+            city?.let { putString(KEY_RESOLVED_CITY, it) }
+            prefs.getString(LEGACY_KEY_CACHE, null)?.let { putString(KEY_WEATHER_CACHE, it) }
+            putLong(KEY_WEATHER_LAST_UPDATE, prefs.getLong(LEGACY_KEY_LAST_UPDATE, 0L))
+            putBoolean(KEY_SERVER_ENABLED, prefs.getBoolean(LEGACY_KEY_SERVER_ENABLED, false))
+        }.apply()
+
+        prefs.edit().apply {
+            putString(KEY_LOCATION_MODE, if (wasUsingGps) MODE_COARSE else MODE_MANUAL)
+            // Only a manual setup can claim these as the user's choice. If location was
+            // on, what was stored came from GPS or the IP lookup, and it stays device-side.
+            if (!wasUsingGps) {
+                lat?.let { putString(KEY_MANUAL_LAT, it) }
+                lon?.let { putString(KEY_MANUAL_LON, it) }
+                city?.let { putString(KEY_MANUAL_CITY, it) }
+            }
+            remove(LEGACY_KEY_LAT)
+            remove(LEGACY_KEY_LON)
+            remove(LEGACY_KEY_CITY)
+            remove(LEGACY_KEY_USE_GPS)
+            remove(LEGACY_KEY_CACHE)
+            remove(LEGACY_KEY_LAST_UPDATE)
+            remove(LEGACY_KEY_SERVER_ENABLED)
+        }.apply()
     }
 
     // --- flow builders -------------------------------------------------------------
@@ -73,6 +135,21 @@ class SettingsRepository(context: Context) {
     private fun stringFlow(key: String, default: String): MutableStateFlow<String> =
         MutableStateFlow(prefs.getString(key, default) ?: default).also { flow ->
             reloaders[key] = { flow.value = prefs.getString(key, default) ?: default }
+        }
+
+    private fun deviceStringFlow(key: String, default: String): MutableStateFlow<String> =
+        MutableStateFlow(devicePrefs.getString(key, default) ?: default).also { flow ->
+            reloaders[key] = { flow.value = devicePrefs.getString(key, default) ?: default }
+        }
+
+    private fun deviceBoolFlow(key: String, default: Boolean): MutableStateFlow<Boolean> =
+        MutableStateFlow(devicePrefs.getBoolean(key, default)).also { flow ->
+            reloaders[key] = { flow.value = devicePrefs.getBoolean(key, default) }
+        }
+
+    private fun deviceLongFlow(key: String, default: Long): MutableStateFlow<Long> =
+        MutableStateFlow(devicePrefs.getLong(key, default)).also { flow ->
+            reloaders[key] = { flow.value = devicePrefs.getLong(key, default) }
         }
 
     // --- burn-in protection and display --------------------------------------------
@@ -158,28 +235,86 @@ class SettingsRepository(context: Context) {
 
     // --- weather -----------------------------------------------------------------------
 
-    private val _weatherLat = stringFlow(KEY_WEATHER_LAT, DEFAULT_LAT)
-    val weatherLat: StateFlow<String> = _weatherLat.asStateFlow()
+    /** [MODE_MANUAL] or [MODE_COARSE]. */
+    private val _locationMode = stringFlow(KEY_LOCATION_MODE, MODE_MANUAL)
+    val locationMode: StateFlow<String> = _locationMode.asStateFlow()
 
-    private val _weatherLon = stringFlow(KEY_WEATHER_LON, DEFAULT_LON)
-    val weatherLon: StateFlow<String> = _weatherLon.asStateFlow()
+    // What the user picked. Survives switching to location mode and back, which the
+    // single-key version did not.
+    private val _manualLat = stringFlow(KEY_MANUAL_LAT, DEFAULT_LAT)
+    private val _manualLon = stringFlow(KEY_MANUAL_LON, DEFAULT_LON)
+    private val _manualCity = stringFlow(KEY_MANUAL_CITY, DEFAULT_CITY)
+    val manualCity: StateFlow<String> = _manualCity.asStateFlow()
 
-    private val _weatherCity = stringFlow(KEY_WEATHER_CITY, DEFAULT_CITY)
-    val weatherCity: StateFlow<String> = _weatherCity.asStateFlow()
+    // What this device resolved, from GPS or the IP lookup.
+    private val _resolvedLat = deviceStringFlow(KEY_RESOLVED_LAT, DEFAULT_LAT)
+    private val _resolvedLon = deviceStringFlow(KEY_RESOLVED_LON, DEFAULT_LON)
+    private val _resolvedCity = deviceStringFlow(KEY_RESOLVED_CITY, DEFAULT_CITY)
 
-    private val _weatherUseGps = boolFlow(KEY_WEATHER_USE_GPS, false)
-    val weatherUseGps: StateFlow<Boolean> = _weatherUseGps.asStateFlow()
-
-    private val _weatherLastUpdate = longFlow(KEY_WEATHER_LAST_UPDATE, 0L)
+    private val _weatherLastUpdate = deviceLongFlow(KEY_WEATHER_LAST_UPDATE, 0L)
     val weatherLastUpdate: StateFlow<Long> = _weatherLastUpdate.asStateFlow()
 
-    fun setWeatherUseGps(enabled: Boolean) = putBoolean(KEY_WEATHER_USE_GPS, enabled)
+    // The effective values, which is what the UI wants. Recomputed by the chained
+    // reloaders in the init block below rather than a combine(), which would need a scope.
+    private val _weatherLat = MutableStateFlow(effectiveLat())
+    val weatherLat: StateFlow<String> = _weatherLat.asStateFlow()
 
+    private val _weatherLon = MutableStateFlow(effectiveLon())
+    val weatherLon: StateFlow<String> = _weatherLon.asStateFlow()
+
+    private val _weatherCity = MutableStateFlow(effectiveCity())
+    val weatherCity: StateFlow<String> = _weatherCity.asStateFlow()
+
+    /** Kept as a boolean because that is what the settings switch is. */
+    val weatherUseGps: StateFlow<Boolean> = MutableStateFlow(usingCoarse()).also { flow ->
+        val previous = reloaders[KEY_LOCATION_MODE]
+        reloaders[KEY_LOCATION_MODE] = {
+            previous?.invoke()
+            flow.value = usingCoarse()
+        }
+    }.asStateFlow()
+
+    init {
+        // Any of these changing moves the effective values, so chain onto whatever the
+        // builders already registered rather than replacing it.
+        listOf(
+            KEY_LOCATION_MODE, KEY_MANUAL_LAT, KEY_MANUAL_LON, KEY_MANUAL_CITY,
+            KEY_RESOLVED_LAT, KEY_RESOLVED_LON, KEY_RESOLVED_CITY,
+        ).forEach { key ->
+            val previous = reloaders[key]
+            reloaders[key] = {
+                previous?.invoke()
+                _weatherLat.value = effectiveLat()
+                _weatherLon.value = effectiveLon()
+                _weatherCity.value = effectiveCity()
+            }
+        }
+    }
+
+    private fun usingCoarse() = prefs.getString(KEY_LOCATION_MODE, MODE_MANUAL) == MODE_COARSE
+
+    private fun effectiveLat() =
+        if (usingCoarse()) devicePrefs.getString(KEY_RESOLVED_LAT, DEFAULT_LAT) ?: DEFAULT_LAT
+        else prefs.getString(KEY_MANUAL_LAT, DEFAULT_LAT) ?: DEFAULT_LAT
+
+    private fun effectiveLon() =
+        if (usingCoarse()) devicePrefs.getString(KEY_RESOLVED_LON, DEFAULT_LON) ?: DEFAULT_LON
+        else prefs.getString(KEY_MANUAL_LON, DEFAULT_LON) ?: DEFAULT_LON
+
+    private fun effectiveCity() =
+        if (usingCoarse()) devicePrefs.getString(KEY_RESOLVED_CITY, DEFAULT_CITY) ?: DEFAULT_CITY
+        else prefs.getString(KEY_MANUAL_CITY, DEFAULT_CITY) ?: DEFAULT_CITY
+
+    fun setWeatherUseGps(enabled: Boolean) =
+        putString(KEY_LOCATION_MODE, if (enabled) MODE_COARSE else MODE_MANUAL)
+
+    /** Picking a city is a manual choice, so it sets the mode as well as the values. */
     fun setWeatherLocation(lat: String, lon: String, city: String) {
         prefs.edit()
-            .putString(KEY_WEATHER_LAT, lat)
-            .putString(KEY_WEATHER_LON, lon)
-            .putString(KEY_WEATHER_CITY, city)
+            .putString(KEY_MANUAL_LAT, lat)
+            .putString(KEY_MANUAL_LON, lon)
+            .putString(KEY_MANUAL_CITY, city)
+            .putString(KEY_LOCATION_MODE, MODE_MANUAL)
             .apply()
     }
 
@@ -192,12 +327,14 @@ class SettingsRepository(context: Context) {
     val appWidgetsEnabled: StateFlow<Boolean> = _appWidgetsEnabled.asStateFlow()
 
     /** Off by default. An upload server nobody is using is a listening socket nobody asked for. */
-    private val _serverEnabled = boolFlow(KEY_SERVER_ENABLED, false)
+    private val _serverEnabled = deviceBoolFlow(KEY_SERVER_ENABLED, false)
     val serverEnabled: StateFlow<Boolean> = _serverEnabled.asStateFlow()
 
     fun setConfirmImportEnabled(enabled: Boolean) = putBoolean(KEY_CONFIRM_PLUGIN_IMPORT, enabled)
     fun setAppWidgetsEnabled(enabled: Boolean) = putBoolean(KEY_APP_WIDGETS_ENABLED, enabled)
-    fun setServerEnabled(enabled: Boolean) = putBoolean(KEY_SERVER_ENABLED, enabled)
+    /** Device-side, so a restored phone does not come up already listening. */
+    fun setServerEnabled(enabled: Boolean) =
+        devicePrefs.edit().putBoolean(KEY_SERVER_ENABLED, enabled).apply()
 
     // --- writes ---------------------------------------------------------------------------
     // Writes go to prefs and nowhere else. The change listener puts the value back into the
@@ -217,6 +354,7 @@ class SettingsRepository(context: Context) {
 
     companion object {
         const val PREFS_NAME = "standby_settings"
+        const val DEVICE_PREFS_NAME = "standby_device"
 
         const val DEFAULT_LAT = "52.52"
         const val DEFAULT_LON = "13.41"
@@ -239,14 +377,32 @@ class SettingsRepository(context: Context) {
         private const val KEY_NIGHT_BRIGHTNESS_ENABLED = "night_brightness_enabled"
         private const val KEY_NIGHT_BRIGHTNESS_VALUE = "night_brightness_value"
 
-        private const val KEY_WEATHER_LAT = "weather_lat"
-        private const val KEY_WEATHER_LON = "weather_lon"
-        private const val KEY_WEATHER_CITY = "weather_city"
-        private const val KEY_WEATHER_USE_GPS = "weather_use_gps"
-        private const val KEY_WEATHER_LAST_UPDATE = "weather_last_update"
+        const val MODE_MANUAL = "manual"
+        const val MODE_COARSE = "coarse"
+
+        private const val KEY_LOCATION_MODE = "weather_location_mode"
+        private const val KEY_MANUAL_LAT = "weather_manual_lat"
+        private const val KEY_MANUAL_LON = "weather_manual_lon"
+        private const val KEY_MANUAL_CITY = "weather_manual_city"
+
+        // Read directly by ProviderManager and ProviderBridge, which own the fetching.
+        const val KEY_RESOLVED_LAT = "weather_resolved_lat"
+        const val KEY_RESOLVED_LON = "weather_resolved_lon"
+        const val KEY_RESOLVED_CITY = "weather_resolved_city"
+        const val KEY_WEATHER_CACHE = "weather_cache"
+        const val KEY_WEATHER_LAST_UPDATE = "weather_last_update"
+
+        // Only read once, by the migration.
+        private const val LEGACY_KEY_LAT = "weather_lat"
+        private const val LEGACY_KEY_LON = "weather_lon"
+        private const val LEGACY_KEY_CITY = "weather_city"
+        private const val LEGACY_KEY_USE_GPS = "weather_use_gps"
+        private const val LEGACY_KEY_CACHE = "weather_cache"
+        private const val LEGACY_KEY_LAST_UPDATE = "weather_last_update"
+        private const val LEGACY_KEY_SERVER_ENABLED = "server_enabled"
 
         private const val KEY_CONFIRM_PLUGIN_IMPORT = "confirm_plugin_import"
         private const val KEY_APP_WIDGETS_ENABLED = "app_widgets_enabled"
-        private const val KEY_SERVER_ENABLED = "server_enabled"
+        const val KEY_SERVER_ENABLED = "server_enabled"
     }
 }

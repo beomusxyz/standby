@@ -1414,6 +1414,40 @@ fun ProviderSettingsTab(
                 searchResults = onSearchLocations(searchQuery)
             }
             
+            // The switch this pair of parameters was always for. It was plumbed all the
+            // way from the ViewModel and then never rendered, so there has never been a
+            // way to turn it on.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Use my approximate location",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (weatherUseGps) {
+                            "Coarse location only. Your chosen city is kept and comes back if you turn this off."
+                        } else {
+                            "Off. Weather uses the city you pick below."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = weatherUseGps,
+                    onCheckedChange = onWeatherUseGpsChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
