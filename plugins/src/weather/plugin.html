@@ -179,7 +179,10 @@
         document.getElementById('description').textContent = "Partly Cloudy";
         document.getElementById('high-low').innerHTML = `H:25&deg; L:15&deg;`;
         const iconImg = document.getElementById('icon');
-        iconImg.src = `https://openweathermap.org/img/wn/02d@4x.png`;
+        // Inline, not an openweathermap URL. This branch only runs in a desktop
+        // browser, but the manifest declares an empty network_whitelist and a
+        // manifest that lies about what a plugin reaches is worse than useless.
+        iconImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='24' cy='23' r='11' fill='%23f6c453'/%3E%3Cpath d='M20 47a10 10 0 0 1 .6-19.98A14 14 0 0 1 47 31a9 9 0 0 1-1 16z' fill='%23d8dee8'/%3E%3C/svg%3E";
         iconImg.style.display = 'block';
         return;
       }
