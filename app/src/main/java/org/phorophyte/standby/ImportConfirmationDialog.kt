@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ fun ImportConfirmationDialog(
         var customName by remember(pendingImport) { mutableStateOf(pendingImport.name) }
         val leftScrollState = rememberScrollState()
         val rightScrollState = rememberScrollState()
+        val portrait = LocalConfiguration.current.screenHeightDp > LocalConfiguration.current.screenWidthDp
 
         Column(
             modifier = Modifier
@@ -42,69 +44,24 @@ fun ImportConfirmationDialog(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // header with inline buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Text(
-                        text = "Confirm Plugin Import",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = onCancel,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Cancel")
-                    }
-                    Button(
-                        onClick = {
-                            if (customName.isNotBlank()) {
-                                onConfirm(customName)
-                            }
-                        },
-                        enabled = customName.isNotBlank(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Import")
-                    }
-                }
-            }
+            ImportHeader(
+                portrait = portrait,
+                canImport = customName.isNotBlank(),
+                onCancel = onCancel,
+                onImport = { onConfirm(customName) }
+            )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // split left and right
-            Row(
+            AdaptiveTwoPane(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
+                spacing = 24.dp
             ) {
                 // left: basic plugin metadata
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .verticalScroll(leftScrollState),
+                    modifier = Modifier.verticalScroll(leftScrollState),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // editable name field (maybe append local id??)
@@ -172,10 +129,7 @@ fun ImportConfirmationDialog(
 
                 // right: perms/network
                 Column(
-                    modifier = Modifier
-                        .weight(1.1f)
-                        .fillMaxHeight()
-                        .verticalScroll(rightScrollState),
+                    modifier = Modifier.verticalScroll(rightScrollState),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Card(
@@ -409,6 +363,75 @@ fun ImportConfirmationDialog(
 }
 
 @Composable
+private fun ImportHeader(
+    portrait: Boolean,
+    canImport: Boolean,
+    onCancel: () -> Unit,
+    onImport: () -> Unit
+) {
+    @Composable
+    fun Title() {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+            Text(
+                text = "Confirm Plugin Import",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+
+    @Composable
+    fun Actions() {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(onClick = onCancel, shape = RoundedCornerShape(12.dp)) {
+                Text("Cancel")
+            }
+            Button(
+                onClick = onImport,
+                enabled = canImport,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Import")
+            }
+        }
+    }
+
+    if (portrait) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Title()
+            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+                Actions()
+            }
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Title()
+            Actions()
+        }
+    }
+}
+
+@Composable
 fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -428,7 +451,8 @@ fun DetailRow(label: String, value: String) {
     }
 }
 
-@Preview(device = "spec:parent=pixel_9,orientation=landscape", showBackground = true)
+@Preview(name = "Landscape", device = "spec:parent=pixel_9,orientation=landscape", showBackground = true)
+@Preview(name = "Portrait", device = "spec:parent=pixel_9,orientation=portrait", showBackground = true)
 @Composable
 fun PreviewImportConfirmationDialog() {
     MyApplicationTheme(darkTheme = true) {

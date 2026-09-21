@@ -17,7 +17,7 @@ object DefaultPlugins {
             name = clockName,
             description = "Immersive digital clock with battery indicator",
             author = "System",
-            version = "1.0.0",
+            version = "1.0.1",
             permissions = listOf("battery"),
             networkWhitelist = emptyList(),
             privacyNote = "Runs offline. It reads battery status and the current time from the app.",
@@ -131,6 +131,31 @@ object DefaultPlugins {
     }
     .low-battery #battery-fill {
       background: #f87171;
+    }
+    @media (orientation: portrait) {
+      .plugin-container {
+        width: 84%;
+        max-width: none;
+        align-items: center;
+      }
+      #time {
+        width: 100%;
+        font-size: 23vw;
+        line-height: 1;
+        letter-spacing: -0.06em;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .info {
+        align-self: center;
+        margin-top: 2vh;
+        font-size: 4vw;
+        text-align: center;
+      }
+      #battery-bar {
+        height: 1vh;
+        margin-top: 2vh;
+      }
     }
   </style>
 </head>
