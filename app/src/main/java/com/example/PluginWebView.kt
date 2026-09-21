@@ -96,6 +96,16 @@ fun PluginWebView(
                             return response
                         }
                         
+                        // Schemes that carry their own bytes and never touch the network.
+                        // They have no host, so without this they fall through to the
+                        // whitelist check, fail it for being null, and get "blocked" as
+                        // unwhitelisted network requests. loadDataWithBaseURL is
+                        // implemented as a data:text/html load, so this was firing twice
+                        // on every page turn against the plugin's own document.
+                        if (scheme == "data" || scheme == "blob" || scheme == "about") {
+                            return null
+                        }
+
                         // allow local assets
                         if (scheme == "file" || host == "local.app" || host == "appassets.androidplatform.net") {
                             return null
