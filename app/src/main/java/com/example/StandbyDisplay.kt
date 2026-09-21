@@ -178,24 +178,44 @@ fun StandbyDisplay(
                         onWidgetLongClick = onWidgetLongClick,
                     )
 
-                    is StandbyPage.HalfWidth -> Row(modifier = Modifier.fillMaxSize()) {
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    is StandbyPage.HalfWidth -> {
+                        val half: @Composable (StandbyItem) -> Unit = { item ->
                             StandbyItemView(
-                                item = standbyPage.leftItem,
+                                item = item,
                                 appWidgetHost = appWidgetHost,
                                 refreshTriggers = pluginRefreshTriggers,
                                 onPluginLongClick = onPluginLongClick,
                                 onWidgetLongClick = onWidgetLongClick,
                             )
                         }
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                            StandbyItemView(
-                                item = standbyPage.rightItem,
-                                appWidgetHost = appWidgetHost,
-                                refreshTriggers = pluginRefreshTriggers,
-                                onPluginLongClick = onPluginLongClick,
-                                onWidgetLongClick = onWidgetLongClick,
-                            )
+
+                        // Side by side only makes sense while the page is wider than it
+                        // is tall. A dream follows the device orientation and cannot
+                        // refuse, so a phone docked upright would otherwise get two tall
+                        // skinny columns. Measuring the page instead of reading the
+                        // configuration also means rotating mid-dream re-lays out on its
+                        // own, and that a host which ever renders this smaller than the
+                        // screen still gets the right answer.
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            if (maxWidth >= maxHeight) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                        half(standbyPage.leftItem)
+                                    }
+                                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                        half(standbyPage.rightItem)
+                                    }
+                                }
+                            } else {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                        half(standbyPage.leftItem)
+                                    }
+                                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                                        half(standbyPage.rightItem)
+                                    }
+                                }
+                            }
                         }
                     }
 
