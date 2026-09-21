@@ -1,0 +1,12 @@
+{
+  "id": "xyz.beomus.uritest",
+  "name": "URI Test",
+  "description": "Throwaway. Checks which URI schemes survive shouldInterceptRequest.",
+  "author": "beomusxyz",
+  "version": "0.0.1",
+  "size": "full",
+  "permissions": [],
+  "providers": [],
+  "network_whitelist": [],
+  "min_app_version": 1
+}

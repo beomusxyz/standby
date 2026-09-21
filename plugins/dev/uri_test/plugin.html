@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #0A0A0A; color: #eee; }
+  body { font: 400 3.4vmin/1.5 monospace; padding: 4vmin; box-sizing: border-box; }
+  h1 { font-size: 4.5vmin; margin: 0 0 2vmin; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1.2vmin 0; border-bottom: 1px solid #222; vertical-align: middle; }
+  td.name { color: #999; }
+  td.res { text-align: right; font-weight: 600; }
+  .pass { color: #4ade80; }
+  .fail { color: #f87171; }
+  .wait { color: #666; }
+  #swatches { margin-top: 3vmin; display: flex; gap: 2vmin; align-items: center; }
+  #swatches img { width: 12vmin; height: 12vmin; background: #1a1a1a; image-rendering: pixelated; }
+</style>
+</head>
+<body>
+<h1>URI scheme test</h1>
+<table id="results"></table>
+<div id="swatches"></div>
+
+<script>
+const TESTS = [
+  ['data: png',  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'img'],
+  ['data: svg',  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%234ade80'/%3E%3C/svg%3E", 'img'],
+  ['data: text', 'data:text/plain,hello', 'fetch'],
+  ['blob:',      null, 'blob'],
+  ['relative',   'plugin_manifest.json', 'fetch'],
+];
+
+const table = document.getElementById('results');
+const swatches = document.getElementById('swatches');
+
+function row(name) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td class="name">' + name + '</td><td class="res wait">testing</td>';
+  table.appendChild(tr);
+  return tr.querySelector('.res');
+}
+
+function done(cell, name, ok, detail) {
+  cell.className = 'res ' + (ok ? 'pass' : 'fail');
+  cell.textContent = ok ? 'loaded' : 'BLOCKED';
+  console.log('URITEST ' + name + ' => ' + (ok ? 'PASS' : 'FAIL') + (detail ? ' (' + detail + ')' : ''));
+}
+
+function testImg(cell, name, url) {
+  const img = new Image();
+  img.onload  = () => { swatches.appendChild(img); done(cell, name, true, img.naturalWidth + 'x' + img.naturalHeight); };
+  img.onerror = () => done(cell, name, false, 'onerror');
+  img.src = url;
+}
+
+async function testFetch(cell, name, url) {
+  try {
+    const r = await fetch(url);
+    const t = await r.text();
+    // An intercepted request comes back as an empty 200, so status alone is not enough.
+    done(cell, name, t.length > 0, t.length + ' bytes, status ' + r.status);
+  } catch (e) {
+    done(cell, name, false, e.message);
+  }
+}
+
+async function testBlob(cell, name) {
+  try {
+    const url = URL.createObjectURL(new Blob(['hello'], { type: 'text/plain' }));
+    const r = await fetch(url);
+    const t = await r.text();
+    done(cell, name, t.length > 0, t.length + ' bytes');
+  } catch (e) {
+    done(cell, name, false, e.message);
+  }
+}
+
+console.log('URITEST starting, ' + TESTS.length + ' cases');
+for (const [name, url, kind] of TESTS) {
+  const cell = row(name);
+  if (kind === 'img') testImg(cell, name, url);
+  else if (kind === 'blob') testBlob(cell, name);
+  else testFetch(cell, name, url);
+}
+</script>
+</body>
+</html>
