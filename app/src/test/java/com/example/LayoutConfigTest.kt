@@ -7,7 +7,6 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,28 +40,25 @@ class LayoutConfigTest {
         assertEquals("half", entry.type)
         assertEquals("left", entry.leftLocalId)
         assertEquals("right", entry.rightLocalId)
-        assertNull(entry.leftStack)
-        assertNull(entry.rightStack)
+        assertNull(entry.pluginLocalId)
     }
 
     @Test
-    fun stacksKeepTheirOrderWhenSavedAndLoaded() {
-        val expected = PluginManager.LayoutEntry(
-            type = "stack",
-            pluginLocalId = null,
-            leftLocalId = null,
-            rightLocalId = null,
-            pageId = "stack-page",
-            leftStack = listOf("clock", "appwidget:42", "weather"),
-            rightStack = listOf("calendar", "stocks"),
+    fun stacksBecomeSplitsUsingTheirTopItems() {
+        layoutFile.parentFile?.mkdirs()
+        layoutFile.writeText(
+            """{"pages":[{"type":"stack","plugin_local_id":null,"left_local_id":null,"right_local_id":null,"page_id":"stack-page","left_stack":["clock","weather"],"right_stack":["calendar","stocks"]}]}"""
         )
 
-        PluginManager.saveLayoutConfig(context, listOf(expected))
+        val entry = PluginManager.loadLayoutConfig(context).single()
 
-        assertEquals(expected, PluginManager.loadLayoutConfig(context).single())
+        assertEquals("half", entry.type)
+        assertEquals("clock", entry.leftLocalId)
+        assertEquals("calendar", entry.rightLocalId)
+
         val saved = JSONObject(layoutFile.readText()).getJSONArray("pages").getJSONObject(0)
-        assertTrue(saved.has("left_stack"))
-        assertEquals("appwidget:42", saved.getJSONArray("left_stack").getString(1))
-        assertFalse(saved.isNull("page_id"))
+        assertEquals("half", saved.getString("type"))
+        assertFalse(saved.has("left_stack"))
+        assertFalse(saved.has("right_stack"))
     }
 }

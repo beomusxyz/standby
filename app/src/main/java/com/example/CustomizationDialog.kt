@@ -55,7 +55,6 @@ fun CustomizationDialog(
                         text = when (activePage) {
                             is StandbyPage.FullWidth -> "Customize: ${activePage.plugin?.name ?: "Widget"}"
                             is StandbyPage.HalfWidth -> "Customize Widgets"
-                            is StandbyPage.StackedHalves -> "Customize Widget Stacks"
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -153,19 +152,6 @@ fun CustomizationDialog(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                        }
-                    }
-                }
-                is StandbyPage.StackedHalves -> {
-                    Row(
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        activePage.leftStack.filterIsInstance<StandbyItem.Plugin>().forEach { item ->
-                            PluginCustomizationColumn(item.plugin, onCustomizationValueChange, Modifier.weight(1f).fillMaxHeight())
-                        }
-                        activePage.rightStack.filterIsInstance<StandbyItem.Plugin>().forEach { item ->
-                            PluginCustomizationColumn(item.plugin, onCustomizationValueChange, Modifier.weight(1f).fillMaxHeight())
                         }
                     }
                 }

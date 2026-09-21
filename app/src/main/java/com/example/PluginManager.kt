@@ -423,9 +423,7 @@ object PluginManager {
         val pluginLocalId: String?,
         val leftLocalId: String?,
         val rightLocalId: String?,
-        val pageId: String,
-        val leftStack: List<String>? = null,
-        val rightStack: List<String>? = null,
+        val pageId: String
     )
 
     fun loadLayoutConfig(context: Context): List<LayoutEntry> {
@@ -436,24 +434,25 @@ object PluginManager {
             val json = JSONObject(content)
             val array = json.optJSONArray("pages") ?: JSONArray()
             val list = mutableListOf<LayoutEntry>()
+            var migratedStacks = false
             for (i in 0 until array.length()) {
                 val obj = array.getJSONObject(i)
+                val storedType = obj.getString("type")
+                val isOldStack = storedType == "stack"
+                val leftStackTop = obj.optJSONArray("left_stack")?.optString(0)?.takeIf(String::isNotBlank)
+                val rightStackTop = obj.optJSONArray("right_stack")?.optString(0)?.takeIf(String::isNotBlank)
+                if (isOldStack) migratedStacks = true
                 list.add(
                     LayoutEntry(
-                        type = obj.getString("type"),
+                        type = if (isOldStack) "half" else storedType,
                         pluginLocalId = if (obj.has("plugin_local_id") && !obj.isNull("plugin_local_id")) obj.getString("plugin_local_id") else null,
-                        leftLocalId = if (obj.has("left_local_id") && !obj.isNull("left_local_id")) obj.getString("left_local_id") else null,
-                        rightLocalId = if (obj.has("right_local_id") && !obj.isNull("right_local_id")) obj.getString("right_local_id") else null,
-                        pageId = if (obj.has("page_id") && !obj.isNull("page_id")) obj.getString("page_id") else java.util.UUID.randomUUID().toString(),
-                        leftStack = obj.optJSONArray("left_stack")?.let { values ->
-                            List(values.length()) { values.optString(it) }.filter(String::isNotBlank)
-                        },
-                        rightStack = obj.optJSONArray("right_stack")?.let { values ->
-                            List(values.length()) { values.optString(it) }.filter(String::isNotBlank)
-                        },
+                        leftLocalId = leftStackTop ?: if (obj.has("left_local_id") && !obj.isNull("left_local_id")) obj.getString("left_local_id") else null,
+                        rightLocalId = rightStackTop ?: if (obj.has("right_local_id") && !obj.isNull("right_local_id")) obj.getString("right_local_id") else null,
+                        pageId = if (obj.has("page_id") && !obj.isNull("page_id")) obj.getString("page_id") else java.util.UUID.randomUUID().toString()
                     )
                 )
             }
+            if (migratedStacks) saveLayoutConfig(context, list)
             list
         } catch (e: java.lang.Exception) {
             Log.e(TAG, "Error loading layout config", e)
@@ -473,10 +472,6 @@ object PluginManager {
                     put("left_local_id", entry.leftLocalId ?: JSONObject.NULL)
                     put("right_local_id", entry.rightLocalId ?: JSONObject.NULL)
                     put("page_id", entry.pageId)
-                    if (entry.type == "stack") {
-                        put("left_stack", JSONArray(entry.leftStack ?: emptyList<String>()))
-                        put("right_stack", JSONArray(entry.rightStack ?: emptyList<String>()))
-                    }
                 }
                 array.put(obj)
             }

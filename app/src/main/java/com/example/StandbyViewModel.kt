@@ -159,11 +159,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                         refreshNativeAppWidget(context, widgetItem.appWidgetId, widgetItem.providerInfo.provider)
                     }
                 }
-                is StandbyPage.StackedHalves -> {
-                    (page.leftStack + page.rightStack).filterIsInstance<StandbyItem.NativeAppWidget>().forEach { item ->
-                        refreshNativeAppWidget(context, item.appWidgetId, item.providerInfo.provider)
-                    }
-                }
             }
         }
     }
@@ -293,20 +288,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     if (item != null) {
                         pagesList.add(StandbyPage.FullWidth(item, entry.pageId))
                     }
-                } else if (entry.type == "stack") {
-                    fun resolveStack(ids: List<String>?) = ids.orEmpty().mapNotNull { id ->
-                        resolveStandbyItem(context, id, installed)
-                    }.ifEmpty {
-                        listOfNotNull(
-                            resolveStandbyItem(context, defaultHalf, installed)
-                                ?: resolveStandbyItem(context, defaultFull, installed)
-                        )
-                    }
-                    val leftStack = resolveStack(entry.leftStack)
-                    val rightStack = resolveStack(entry.rightStack)
-                    if (leftStack.isNotEmpty() && rightStack.isNotEmpty()) {
-                        pagesList.add(StandbyPage.StackedHalves(leftStack, rightStack, entry.pageId))
-                    }
                 } else {
                     val leftItem = resolveStandbyItem(context, entry.leftLocalId, installed)
                         ?: resolveStandbyItem(context, defaultHalf, installed)
@@ -395,18 +376,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     pageId = java.util.UUID.randomUUID().toString()
                 )
             )
-        } else if (type == "stack") {
-            layout.add(
-                PluginManager.LayoutEntry(
-                    type = "stack",
-                    pluginLocalId = null,
-                    leftLocalId = null,
-                    rightLocalId = null,
-                    pageId = java.util.UUID.randomUUID().toString(),
-                    leftStack = listOf(defaultHalf),
-                    rightStack = listOf(defaultHalf),
-                )
-            )
         } else {
             layout.add(
                 PluginManager.LayoutEntry(
@@ -431,8 +400,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             cleanupAppWidgetId(context, entry.pluginLocalId)
             cleanupAppWidgetId(context, entry.leftLocalId)
             cleanupAppWidgetId(context, entry.rightLocalId)
-            entry.leftStack.orEmpty().forEach { cleanupAppWidgetId(context, it) }
-            entry.rightStack.orEmpty().forEach { cleanupAppWidgetId(context, it) }
         }
         layout.removeAll { it.pageId == pageId }
         PluginManager.saveLayoutConfig(context, layout)
@@ -448,20 +415,13 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun updatePageSlotWithAppWidget(pageId: String, isLeft: Boolean?, appWidgetId: Int, stackIndex: Int? = null) {
+    fun updatePageSlotWithAppWidget(pageId: String, isLeft: Boolean?, appWidgetId: Int) {
         val context = getApplication<Application>()
         ensureLayoutConfigExists(context)
         val widgetLocalId = "appwidget:$appWidgetId"
         val layout = PluginManager.loadLayoutConfig(context).map { entry ->
             if (entry.pageId == pageId) {
-                if (entry.type == "stack" && isLeft != null && stackIndex != null) {
-                    val items = (if (isLeft) entry.leftStack else entry.rightStack).orEmpty().toMutableList()
-                    if (stackIndex in items.indices) {
-                        cleanupAppWidgetId(context, items[stackIndex])
-                        items[stackIndex] = widgetLocalId
-                    }
-                    if (isLeft) entry.copy(leftStack = items) else entry.copy(rightStack = items)
-                } else if (isLeft == null || entry.type == "full") {
+                if (isLeft == null || entry.type == "full") {
                     cleanupAppWidgetId(context, entry.pluginLocalId)
                     entry.copy(pluginLocalId = widgetLocalId)
                 } else if (isLeft) {
@@ -538,48 +498,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         rebuildStandbyPages()
     }
 
-    fun addStackItem(pageId: String, isLeft: Boolean) {
-        val context = getApplication<Application>()
-        val fallback = _plugins.value.firstOrNull { it.size == "half" }?.localId
-            ?: _plugins.value.firstOrNull()?.localId ?: return
-        val layout = PluginManager.loadLayoutConfig(context).map { entry ->
-            if (entry.pageId != pageId || entry.type != "stack") return@map entry
-            if (isLeft) entry.copy(leftStack = entry.leftStack.orEmpty() + fallback)
-            else entry.copy(rightStack = entry.rightStack.orEmpty() + fallback)
-        }
-        PluginManager.saveLayoutConfig(context, layout)
-        rebuildStandbyPages()
-    }
-
-    fun updateStackItem(pageId: String, isLeft: Boolean, index: Int, localId: String) =
-        changeStack(pageId, isLeft) { items ->
-            if (index in items.indices) items[index] = localId
-        }
-
-    fun removeStackItem(pageId: String, isLeft: Boolean, index: Int) =
-        changeStack(pageId, isLeft) { items ->
-            if (items.size > 1 && index in items.indices) items.removeAt(index)
-        }
-
-    fun moveStackItem(pageId: String, isLeft: Boolean, from: Int, to: Int) =
-        changeStack(pageId, isLeft) { items ->
-            if (from in items.indices && to in items.indices) items.add(to, items.removeAt(from))
-        }
-
-    private fun changeStack(pageId: String, isLeft: Boolean, change: (MutableList<String>) -> Unit) {
-        val context = getApplication<Application>()
-        val layout = PluginManager.loadLayoutConfig(context).map { entry ->
-            if (entry.pageId != pageId || entry.type != "stack") return@map entry
-            val items = (if (isLeft) entry.leftStack else entry.rightStack).orEmpty().toMutableList()
-            val before = items.toList()
-            change(items)
-            (before - items.toSet()).forEach { cleanupAppWidgetId(context, it) }
-            if (isLeft) entry.copy(leftStack = items) else entry.copy(rightStack = items)
-        }
-        PluginManager.saveLayoutConfig(context, layout)
-        rebuildStandbyPages()
-    }
-
     fun updatePageSlotFull(pageId: String, newPluginLocalId: String) {
         val context = getApplication<Application>()
         ensureLayoutConfigExists(context)
@@ -602,37 +520,12 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
         val layout = PluginManager.loadLayoutConfig(context).map { entry ->
             if (entry.pageId == pageId && entry.type != newType) {
                 val updated = if (newType == "full") {
-                    entry.copy(
-                        type = "full",
-                        pluginLocalId = defaultFull,
-                        leftLocalId = null,
-                        rightLocalId = null,
-                        leftStack = null,
-                        rightStack = null,
-                    )
-                } else if (newType == "stack") {
-                    entry.copy(
-                        type = "stack",
-                        pluginLocalId = null,
-                        leftLocalId = null,
-                        rightLocalId = null,
-                        leftStack = listOf(entry.leftLocalId ?: defaultHalf),
-                        rightStack = listOf(entry.rightLocalId ?: defaultHalf),
-                    )
+                    entry.copy(type = "full", pluginLocalId = defaultFull, leftLocalId = null, rightLocalId = null)
                 } else {
-                    entry.copy(
-                        type = "half",
-                        pluginLocalId = null,
-                        leftLocalId = entry.leftStack?.firstOrNull() ?: defaultHalf,
-                        rightLocalId = entry.rightStack?.firstOrNull() ?: defaultHalf,
-                        leftStack = null,
-                        rightStack = null,
-                    )
+                    entry.copy(type = "half", pluginLocalId = null, leftLocalId = defaultHalf, rightLocalId = defaultHalf)
                 }
-                val oldItems = listOfNotNull(entry.pluginLocalId, entry.leftLocalId, entry.rightLocalId) +
-                    entry.leftStack.orEmpty() + entry.rightStack.orEmpty()
-                val keptItems = listOfNotNull(updated.pluginLocalId, updated.leftLocalId, updated.rightLocalId) +
-                    updated.leftStack.orEmpty() + updated.rightStack.orEmpty()
+                val oldItems = listOfNotNull(entry.pluginLocalId, entry.leftLocalId, entry.rightLocalId)
+                val keptItems = listOfNotNull(updated.pluginLocalId, updated.leftLocalId, updated.rightLocalId)
                 (oldItems - keptItems.toSet()).forEach { cleanupAppWidgetId(context, it) }
                 updated
             } else entry
@@ -690,14 +583,6 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     } else page.rightItem
                     
                     page.copy(leftItem = newLeftItem, rightItem = newRightItem)
-                }
-                is StandbyPage.StackedHalves -> {
-                    fun updated(items: List<StandbyItem>) = items.map { item ->
-                        if (item is StandbyItem.Plugin && item.plugin.localId == pluginLocalId) {
-                            StandbyItem.Plugin(updatedList.first { it.localId == pluginLocalId })
-                        } else item
-                    }
-                    page.copy(leftStack = updated(page.leftStack), rightStack = updated(page.rightStack))
                 }
             }
         }
