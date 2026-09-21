@@ -69,6 +69,11 @@ OLED protection
 - `INTERNET`: Allow web plugins to fetch online data, local upload server and update providers. 
 - `VIBRATE`: Duh.
 - `QUERY_ALL_PACKAGES` Needed to use third party app widgets.
+- `ACCESS_COARSE_LOCATION`: Optional, asked at the toggle. Weather for where you are.
+- `ACCESS_LOCAL_NETWORK`: Required from Android 17 for the upload server to accept a connection.
+
+See [PRIVACY.md](PRIVACY.md) for what leaves the device, when, and what each permission is
+for. The same text is in the app under Settings, Privacy.
 
 
 ## Building

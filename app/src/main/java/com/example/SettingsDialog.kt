@@ -465,6 +465,39 @@ fun GeneralSettingsTab(
                     )
                 }
                 
+                var showPrivacy by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Privacy",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "What leaves this device, and what each permission is for",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(onClick = { showPrivacy = true }) {
+                        Text("Read")
+                    }
+                }
+                if (showPrivacy) {
+                    Dialog(
+                        onDismissRequest = { showPrivacy = false },
+                        properties = DialogProperties(usePlatformDefaultWidth = false)
+                    ) {
+                        PrivacyDialog(onDismissRequest = { showPrivacy = false })
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
