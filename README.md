@@ -1,85 +1,160 @@
-![image of an analog clock next to a monthly calendar](img/standby_hero.png)
+![Standby showing an analog clock and monthly calendar](img/standby_hero.png)
 
 # Standby
-> [!IMPORTANT]
-> This app is still very much WIP!
 
-**Plugins can be found under: [plugins/build/](plugins/build/)**
+Standby turns an Android phone into a configurable clock, information display,
+or dashboard while it charges. It runs as Android's screen saver and supports
+HTML/CSS/JavaScript plugins alongside normal Android home-screen widgets.
 
-**Video Demo: [video link](https://drive.google.com/file/d/1LBqg1Of4_amh87YIiEeGrte-fc33Wl7u/view?usp=sharing)**
+The current build supports responsive portrait and landscape layouts, live
+configuration in either orientation, Android widget hosting, explicit plugin
+permissions and privacy notes, scheduled night mode, display dimming, and OLED
+burn-in protection.
 
-Standby is an open source, modular and extensible Android app similar to the StandBy mode found on iOS devices.  
-
-The main difference between similar standby mode apps on the Play Store is that Standby is open source, free and extensible using HTML/CSS/JS. 
-
+Version 0.1 is an early release for testing with friends. Expect rough edges and
+please report anything that breaks.
 
 ## Install
-Requires Android 13 or newer.
 
-1. Download the latest [release APK](https://github.com/Haxintosh/standby/releases)   
-2. Tap on the downloaded APK
-3. If needed, allow installation from browser  
-4. Import plugins by using the local uploader or import the plugin ZIP files  
-**Plugins can be found under: [plugins/build/](plugins/build/)**
+Standby requires Android 13 or newer. It is distributed through GitHub and
+Obtainium, not Google Play.
 
-## Implemented features
-- Extensible plugins using HTML/CSS/JS, check out [plugin docs](DOCS.md)
-- Third party app widget support
-- Night mode (schedule, dim brightness, OLED protection)
-- OLED burn in protection (alternate on pixels)
-- Android sensor access in plugin (using `window.AndroidSensors`)
-- Providers (weather currently)
-- Full/split layout for plugins 
-- Customization injection (no plugin reload for customizations)
-- Local upload server
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22org.phorophyte.standby%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fbeomusxyz%2Fstandby%22%2C%22author%22%3A%22beomusxyz%22%2C%22name%22%3A%22Standby%22%7D"><img src="img/badge_obtainium.png" alt="Get it on Obtainium" width="161"></a>
 
-## Documentation 
-Docs for plugins can be found under [plugin docs](DOCS.md)   
-Example plugins are provided under `plugins/`.
+You can also download the APK from the [latest GitHub release](https://github.com/beomusxyz/standby/releases/latest).
+Android may ask you to allow installs from the browser or file manager you used
+to open it.
 
-## Images
+### Verify the app
+
+GitHub releases are signed with this certificate:
+
+```text
+Package: org.phorophyte.standby
+SHA-256: 80:D1:8F:84:95:13:21:11:76:B6:A4:2D:31:3F:7B:A5:FB:81:C7:FC:F0:6E:76:3D:BC:99:D2:BF:10:D4:1C:9D
+```
+
+To check an installed copy with
+[AppVerifier](https://github.com/soupslurpr/AppVerifier), copy and share this
+two-line block to the app:
+
+```text
+org.phorophyte.standby
+80:D1:8F:84:95:13:21:11:76:B6:A4:2D:31:3F:7B:A5:FB:81:C7:FC:F0:6E:76:3D:BC:99:D2:BF:10:D4:1C:9D
+```
+
+Each GitHub release also includes the SHA-256 checksum of its APK. The checksum
+proves that the downloaded file matches that release; the certificate fingerprint
+above proves who signed it.
+
+## Get started
+
+1. Open Standby and tap **+** to choose a full-screen layout, a split layout,
+   an included plugin, or an Android widget.
+2. Tap the pencil to change the active plugin's options.
+3. Tap the gear to configure night mode, OLED protection, weather, and the local
+   plugin uploader.
+4. Rotate the phone to check both layouts. The app preview uses the same renderer
+   as the screen saver.
+5. Open Android **Settings → Display → Screen saver**, choose **Standby**, and
+   select when it should start. The exact menu name varies between Android builds.
+6. Put the phone on charge and let Android start the screen saver, or use the
+   system's **Start now** button if it provides one.
+
+Swipe sideways to move between configured pages. Android keeps its normal lock
+screen gestures: swipe up to unlock and swipe down for system controls.
+
+## Features
+
+- Full-screen and split pages that reflow between landscape and portrait.
+- Responsive plugins written with ordinary HTML, CSS, and JavaScript.
+- Normal Android home-screen widgets, including their configuration activities.
+- Live layout and plugin editing in portrait or landscape.
+- Scheduled night mode with very low brightness and stronger OLED protection.
+- Configurable OLED pixel masking during normal use.
+- Per-plugin permissions, provider access, host allowlists, and privacy notes
+  shown before import.
+- Weather through Open-Meteo, with an optional city or coarse device location.
+- A local, PIN-protected uploader for moving plugin ZIPs onto the phone.
+- No accounts, analytics, advertising, Firebase, or Google Play Services.
+
+## Plugins
+
+Ready-to-import plugin ZIPs are in [`plugins/build/`](plugins/build/). Import one
+from the layout screen, or enable the local uploader in Settings and send it from
+another device on the same network.
+
+The [plugin development guide](DOCS.md) documents manifests, responsive layouts,
+customization controls, the native bridge, privacy notes, and network restrictions.
+Plugin source is under [`plugins/src/`](plugins/src/).
+
+Plugins are code. Read the import screen and install only ones you trust. Standby
+blocks undeclared hosts, but a plugin can use the permissions and providers it
+declares. The [privacy document](PRIVACY.md) describes the app, included plugins,
+Android widgets, backups, weather, and the uploader in detail.
+
+## Permissions
+
+- **Internet:** weather, the local uploader, and network access explicitly
+  declared by an imported plugin.
+- **Vibrate:** a short response when paging between screens.
+- **Approximate location:** optional local weather when you enable it.
+- **Local network:** lets the uploader accept a connection on Android 17 and
+  newer.
+- **Query installed apps:** finds apps that provide Android widgets. This is
+  currently declared broadly and is being tested for removal before 1.0.
+
+## Screenshots
+
 ### Layouts
-Side by side layout:
-  ![Side-by-side widget layout](img/half_plugin.png)
-Fullscreen layout:
-  ![Full-screen widget layout](img/fullscreen_plugin.png)
 
-### Example Widgets
-Battery stats:
-  ![Battery stats monitor widget](img/battery_stats.png)
-Weather info:
-  ![Weather and clock widget](img/clock_weather.png)
-Bad Apple:
-  ![Bad Apple ASCII](img/bad_apple.png)
-3rd party widgets:
-  ![material clock](img/pixel_clock.png)
-  ![github contributions widget](img/app_widget_example.png)
-Other clocks:
-  ![Customizable color clock](img/colorful_clock.png)
-  ![Elongated typography clock](img/elongated_clock.png)
-  ![2 clocks side by side](img/side_clocks.png)
+![Side-by-side widget layout](img/half_plugin.png)
+
+![Full-screen widget layout](img/fullscreen_plugin.png)
+
+### Plugins and Android widgets
+
+![Battery statistics plugin](img/battery_stats.png)
+
+![Weather and clock plugin](img/clock_weather.png)
+
+![Android clock widget](img/pixel_clock.png)
+
+![GitHub contributions Android widget](img/app_widget_example.png)
+
+![Two clocks in a split layout](img/side_clocks.png)
 
 ### Controls
-Customization:
-  ![In-app plugin customization controls](img/plugin_customization.png)
-Night mode:
-  ![Night mode configuration](img/night_mode_setting.png)
-OLED protection
-  ![Shifting subpixel protection pattern overlay](img/oled_burn_example.png)
 
-## App permissions
-- `INTERNET`: Allow web plugins to fetch online data, local upload server and update providers. 
-- `VIBRATE`: Duh.
-- `QUERY_ALL_PACKAGES` Needed to use third party app widgets.
-- `ACCESS_COARSE_LOCATION`: Optional, asked at the toggle. Weather for where you are.
-- `ACCESS_LOCAL_NETWORK`: Required from Android 17 for the upload server to accept a connection.
+![Plugin customization controls](img/plugin_customization.png)
 
-See [PRIVACY.md](PRIVACY.md) for what leaves the device, when, and what each permission is
-for. The same text is in the app under Settings, Privacy.
+![Night mode settings](img/night_mode_setting.png)
 
+![OLED pixel protection](img/oled_burn_example.png)
 
-## Building
-1. Run the Gradle build task:
-   ```bash
-   ./gradlew assembleDebug
-   ```
+## Build
+
+Clone the repository and build a debug APK with the included Gradle wrapper:
+
+```bash
+git clone https://github.com/beomusxyz/standby.git
+cd standby
+./gradlew assembleDebug
+```
+
+The APK is written to `app/build/outputs/apk/debug/app-debug.apk`. The project
+requires Android SDK 37 and uses a Gradle-managed JDK 21 toolchain.
+
+Run the local checks with:
+
+```bash
+./gradlew assembleDebug testDebugUnitTest lintDebug
+```
+
+## Credits and licence
+
+Standby was forked from [Haxintosh/standby](https://github.com/Haxintosh/standby).
+The original project established the plugin system, layout editor, uploader,
+and OLED-protection work this fork builds on.
+
+The project is available under the [MIT licence](LICENSE).
