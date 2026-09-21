@@ -26,4 +26,11 @@ sealed class StandbyPage {
         val leftPlugin: PluginModel? get() = (leftItem as? StandbyItem.Plugin)?.plugin
         val rightPlugin: PluginModel? get() = (rightItem as? StandbyItem.Plugin)?.plugin
     }
+
+    /** Two independently swiped half-width stacks inside one horizontal page. */
+    data class StackedHalves(
+        val leftStack: List<StandbyItem>,
+        val rightStack: List<StandbyItem>,
+        override val pageId: String = UUID.randomUUID().toString()
+    ) : StandbyPage()
 }

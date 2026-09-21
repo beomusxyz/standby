@@ -423,7 +423,9 @@ object PluginManager {
         val pluginLocalId: String?,
         val leftLocalId: String?,
         val rightLocalId: String?,
-        val pageId: String
+        val pageId: String,
+        val leftStack: List<String>? = null,
+        val rightStack: List<String>? = null,
     )
 
     fun loadLayoutConfig(context: Context): List<LayoutEntry> {
@@ -442,7 +444,13 @@ object PluginManager {
                         pluginLocalId = if (obj.has("plugin_local_id") && !obj.isNull("plugin_local_id")) obj.getString("plugin_local_id") else null,
                         leftLocalId = if (obj.has("left_local_id") && !obj.isNull("left_local_id")) obj.getString("left_local_id") else null,
                         rightLocalId = if (obj.has("right_local_id") && !obj.isNull("right_local_id")) obj.getString("right_local_id") else null,
-                        pageId = if (obj.has("page_id") && !obj.isNull("page_id")) obj.getString("page_id") else java.util.UUID.randomUUID().toString()
+                        pageId = if (obj.has("page_id") && !obj.isNull("page_id")) obj.getString("page_id") else java.util.UUID.randomUUID().toString(),
+                        leftStack = obj.optJSONArray("left_stack")?.let { values ->
+                            List(values.length()) { values.optString(it) }.filter(String::isNotBlank)
+                        },
+                        rightStack = obj.optJSONArray("right_stack")?.let { values ->
+                            List(values.length()) { values.optString(it) }.filter(String::isNotBlank)
+                        },
                     )
                 )
             }
@@ -465,6 +473,10 @@ object PluginManager {
                     put("left_local_id", entry.leftLocalId ?: JSONObject.NULL)
                     put("right_local_id", entry.rightLocalId ?: JSONObject.NULL)
                     put("page_id", entry.pageId)
+                    if (entry.type == "stack") {
+                        put("left_stack", JSONArray(entry.leftStack ?: emptyList<String>()))
+                        put("right_stack", JSONArray(entry.rightStack ?: emptyList<String>()))
+                    }
                 }
                 array.put(obj)
             }

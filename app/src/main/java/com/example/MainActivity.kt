@@ -346,6 +346,8 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
         val hasCustomization = when (activePage) {
             is StandbyPage.FullWidth -> activePage.plugin?.customizations?.isNotEmpty() == true
             is StandbyPage.HalfWidth -> (activePage.leftPlugin?.customizations?.isNotEmpty() == true) || (activePage.rightPlugin?.customizations?.isNotEmpty() == true)
+            is StandbyPage.StackedHalves -> (activePage.leftStack + activePage.rightStack)
+                .filterIsInstance<StandbyItem.Plugin>().any { it.plugin.customizations.isNotEmpty() }
             null -> false
         }
 
@@ -761,6 +763,5 @@ fun PixelPerfectBurnInMask(
         }
     }
 }
-
 
 

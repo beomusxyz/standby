@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -217,6 +218,35 @@ fun StandbyDisplay(
                                     Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                                         half(standbyPage.rightItem)
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    is StandbyPage.StackedHalves -> {
+                        val stack: @Composable (List<StandbyItem>) -> Unit = { items ->
+                            val state = rememberPagerState(pageCount = { items.size })
+                            VerticalPager(state = state, modifier = Modifier.fillMaxSize()) { index ->
+                                StandbyItemView(
+                                    item = items[index],
+                                    appWidgetHost = appWidgetHost,
+                                    refreshTriggers = pluginRefreshTriggers,
+                                    appTimeFormat = appTimeFormat,
+                                    onPluginLongClick = onPluginLongClick,
+                                    onWidgetLongClick = onWidgetLongClick,
+                                )
+                            }
+                        }
+                        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                            if (maxWidth >= maxHeight) {
+                                Row(modifier = Modifier.fillMaxSize()) {
+                                    Box(Modifier.weight(1f).fillMaxHeight()) { stack(standbyPage.leftStack) }
+                                    Box(Modifier.weight(1f).fillMaxHeight()) { stack(standbyPage.rightStack) }
+                                }
+                            } else {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    Box(Modifier.weight(1f).fillMaxWidth()) { stack(standbyPage.leftStack) }
+                                    Box(Modifier.weight(1f).fillMaxWidth()) { stack(standbyPage.rightStack) }
                                 }
                             }
                         }

@@ -159,6 +159,11 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                         refreshNativeAppWidget(context, widgetItem.appWidgetId, widgetItem.providerInfo.provider)
                     }
                 }
+                is StandbyPage.StackedHalves -> {
+                    (page.leftStack + page.rightStack).filterIsInstance<StandbyItem.NativeAppWidget>().forEach { item ->
+                        refreshNativeAppWidget(context, item.appWidgetId, item.providerInfo.provider)
+                    }
+                }
             }
         }
     }
@@ -288,6 +293,20 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     if (item != null) {
                         pagesList.add(StandbyPage.FullWidth(item, entry.pageId))
                     }
+                } else if (entry.type == "stack") {
+                    fun resolveStack(ids: List<String>?) = ids.orEmpty().mapNotNull { id ->
+                        resolveStandbyItem(context, id, installed)
+                    }.ifEmpty {
+                        listOfNotNull(
+                            resolveStandbyItem(context, defaultHalf, installed)
+                                ?: resolveStandbyItem(context, defaultFull, installed)
+                        )
+                    }
+                    val leftStack = resolveStack(entry.leftStack)
+                    val rightStack = resolveStack(entry.rightStack)
+                    if (leftStack.isNotEmpty() && rightStack.isNotEmpty()) {
+                        pagesList.add(StandbyPage.StackedHalves(leftStack, rightStack, entry.pageId))
+                    }
                 } else {
                     val leftItem = resolveStandbyItem(context, entry.leftLocalId, installed)
                         ?: resolveStandbyItem(context, defaultHalf, installed)
@@ -376,6 +395,18 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     pageId = java.util.UUID.randomUUID().toString()
                 )
             )
+        } else if (type == "stack") {
+            layout.add(
+                PluginManager.LayoutEntry(
+                    type = "stack",
+                    pluginLocalId = null,
+                    leftLocalId = null,
+                    rightLocalId = null,
+                    pageId = java.util.UUID.randomUUID().toString(),
+                    leftStack = listOf(defaultHalf),
+                    rightStack = listOf(defaultHalf),
+                )
+            )
         } else {
             layout.add(
                 PluginManager.LayoutEntry(
@@ -400,6 +431,8 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             cleanupAppWidgetId(context, entry.pluginLocalId)
             cleanupAppWidgetId(context, entry.leftLocalId)
             cleanupAppWidgetId(context, entry.rightLocalId)
+            entry.leftStack.orEmpty().forEach { cleanupAppWidgetId(context, it) }
+            entry.rightStack.orEmpty().forEach { cleanupAppWidgetId(context, it) }
         }
         layout.removeAll { it.pageId == pageId }
         PluginManager.saveLayoutConfig(context, layout)
@@ -521,8 +554,24 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             if (entry.pageId == pageId) {
                 if (newType == "full") {
                     entry.copy(type = "full", pluginLocalId = defaultFull, leftLocalId = null, rightLocalId = null)
+                } else if (newType == "stack") {
+                    entry.copy(
+                        type = "stack",
+                        pluginLocalId = null,
+                        leftLocalId = null,
+                        rightLocalId = null,
+                        leftStack = listOf(entry.leftLocalId ?: defaultHalf),
+                        rightStack = listOf(entry.rightLocalId ?: defaultHalf),
+                    )
                 } else {
-                    entry.copy(type = "half", pluginLocalId = null, leftLocalId = defaultHalf, rightLocalId = defaultHalf)
+                    entry.copy(
+                        type = "half",
+                        pluginLocalId = null,
+                        leftLocalId = entry.leftStack?.firstOrNull() ?: defaultHalf,
+                        rightLocalId = entry.rightStack?.firstOrNull() ?: defaultHalf,
+                        leftStack = null,
+                        rightStack = null,
+                    )
                 }
             } else entry
         }
@@ -579,6 +628,14 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                     } else page.rightItem
                     
                     page.copy(leftItem = newLeftItem, rightItem = newRightItem)
+                }
+                is StandbyPage.StackedHalves -> {
+                    fun updated(items: List<StandbyItem>) = items.map { item ->
+                        if (item is StandbyItem.Plugin && item.plugin.localId == pluginLocalId) {
+                            StandbyItem.Plugin(updatedList.first { it.localId == pluginLocalId })
+                        } else item
+                    }
+                    page.copy(leftStack = updated(page.leftStack), rightStack = updated(page.rightStack))
                 }
             }
         }

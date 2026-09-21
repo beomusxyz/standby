@@ -421,6 +421,13 @@ fun ConfigureLayoutsTab(
                                                 )
                                             }
                                         }
+                                        is StandbyPage.StackedHalves -> {
+                                            Text(
+                                                text = "Stacks: ${page.leftStack.size} left, ${page.rightStack.size} right",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
                                     }
                                 }
                             }
