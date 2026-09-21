@@ -104,7 +104,8 @@ To let users customize colors, toggles, or numerical limits directly from the An
 
 ### Property Schema
 
-* **`type`**: Determines the input widget rendered in the Android settings UI. Common values include `"color"`, `"string"`, `"bool"`, `"boolean"`, or `"number"`.
+* **`type`**: Determines the input widget rendered in the Android settings UI. Common values include `"color"`, `"string"`, `"bool"`, `"boolean"`, `"number"`, or `"enum"`.
+* **`options`** *(required for `"enum"`)*: An array of strings. The settings UI renders them as a segmented control, so keep it to two to four short choices. A stored value that is not in the list selects nothing rather than silently falling back to the first choice.
 * **`default`**: The default fallback value (always specified as a string).
 * **`target`**: The destination target of the variable:
   * `"css"`: Injects the value as a CSS custom property (variable) on the document root.
@@ -230,18 +231,42 @@ Retrieves details about the next scheduled system alarm.
   }
   ```
 
-### G. `getCurrentTime()`
+### G. `getTimeFormat()`
+Returns whether this plugin should draw a 12 or 24 hour clock, already resolved.
+* **Required Manifest Permission**: None (always available)
+* **Response Format**: String, either `"12"` or `"24"`
+
+Resolution order: this plugin's own `TIME_FORMAT` customization if it is set to `"12"` or `"24"`, otherwise the app's Clock Format setting, otherwise the device's own 12/24 toggle.
+
+**Do not work this out in JavaScript.** Android's 12/24 setting is `Settings.System.TIME_12_24`, which is not part of the locale, so `Intl.DateTimeFormat().resolvedOptions().hour12` reports the locale default and is wrong for anyone who has changed it. Only the host app can answer.
+
+To let the user override the app setting for your plugin specifically, declare this in `customization.json`:
+
+```json
+{
+  "TIME_FORMAT": {
+    "type": "enum",
+    "options": ["inherit", "12", "24"],
+    "default": "inherit",
+    "target": "js"
+  }
+}
+```
+
+`"inherit"` is what makes it follow the app, and it is what a plugin that declares nothing at all gets. Call `getTimeFormat()` when you render rather than caching it, so a change to either setting shows up on the next tick.
+
+### H. `getCurrentTime()`
 Returns current local time formatted as a simple 24-hour string.
 * **Required Manifest Permission**: None (always available)
 * **Response Format**: String (format: `"HH:mm:ss"`)
 
-### H. `getFormattedTime(formatString)`
+### I. `getFormattedTime(formatString)`
 Returns current local time formatted according to the given Java `SimpleDateFormat` string.
 * **Required Manifest Permission**: None (always available)
 * **Parameters**: `formatString` (String, e.g. `"yyyy-MM-dd"`, `"hh:mm a"`, or `"E, MMM d"`)
 * **Response Format**: String (formatted date/time)
 
-### I. `getCustomizations()`
+### J. `getCustomizations()`
 Returns the raw JSON string containing active customization options.
 * **Required Manifest Permission**: None (always available)
 * **Response Format**: JSON String

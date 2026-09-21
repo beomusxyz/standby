@@ -283,6 +283,44 @@ fun PluginCustomizationColumn(
                                             )
                                         }
                                     }
+                                    "enum" -> {
+                                        val choices = option.options
+                                        if (choices.isEmpty()) {
+                                            // Declaring an enum with no options is a
+                                            // plugin bug. Say so rather than rendering
+                                            // an empty row that looks like a loading state.
+                                            Text(
+                                                text = "This option declares no choices.",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        } else {
+                                            // A stored value outside the list selects
+                                            // nothing, so a typo in the manifest shows up
+                                            // instead of quietly becoming the first choice.
+                                            SingleChoiceSegmentedButtonRow(
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                choices.forEachIndexed { index, choice ->
+                                                    SegmentedButton(
+                                                        selected = currentValue == choice,
+                                                        onClick = {
+                                                            onCustomizationValueChange(plugin.localId, key, choice)
+                                                        },
+                                                        shape = SegmentedButtonDefaults.itemShape(
+                                                            index = index,
+                                                            count = choices.size
+                                                        )
+                                                    ) {
+                                                        Text(
+                                                            text = choice,
+                                                            style = MaterialTheme.typography.labelMedium
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                     "color" -> {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,

@@ -22,7 +22,9 @@ data class CustomizationOption(
     val type: String,
     val default: String,
     val target: String?, // css or js
-    val value: String? = null
+    val value: String? = null,
+    /** Only meaningful for `type: "enum"`. The choices the settings UI offers. */
+    val options: List<String> = emptyList()
 )
 
 data class PendingPluginImport(

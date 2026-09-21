@@ -19,9 +19,14 @@
     "default": "#a32db5",
     "target": "css"
   },
-  "twentyFourHour": {
-    "type": "boolean",
-    "default": "false",
+  "TIME_FORMAT": {
+    "type": "enum",
+    "options": [
+      "inherit",
+      "12",
+      "24"
+    ],
+    "default": "inherit",
     "target": "js"
   }
 }

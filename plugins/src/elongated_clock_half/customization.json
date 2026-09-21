@@ -1,4 +1,4 @@
-﻿{
+{
   "bg-color": {
     "type": "color",
     "default": "#000000",
@@ -14,9 +14,14 @@
     "default": "#8bb3f8",
     "target": "css"
   },
-  "twentyFourHour": {
-    "type": "boolean",
-    "default": "false",
+  "TIME_FORMAT": {
+    "type": "enum",
+    "options": [
+      "inherit",
+      "12",
+      "24"
+    ],
+    "default": "inherit",
     "target": "js"
   }
 }

@@ -65,6 +65,7 @@ fun StandbyDisplay(
     val standbyPages by viewModel.standbyPages.collectAsState()
     val pagerState = rememberPagerState(pageCount = { standbyPages.size })
     val pluginRefreshTriggers by viewModel.pluginRefreshTriggers.collectAsState()
+    val appTimeFormat by viewModel.timeFormat.collectAsState()
 
     val burnInProtectionEnabled by viewModel.burnInProtectionEnabled.collectAsState()
     val delayAfterInteraction by viewModel.delayAfterInteraction.collectAsState()
@@ -174,6 +175,7 @@ fun StandbyDisplay(
                         item = standbyPage.item,
                         appWidgetHost = appWidgetHost,
                         refreshTriggers = pluginRefreshTriggers,
+                        appTimeFormat = appTimeFormat,
                         onPluginLongClick = onPluginLongClick,
                         onWidgetLongClick = onWidgetLongClick,
                     )
@@ -184,6 +186,7 @@ fun StandbyDisplay(
                                 item = item,
                                 appWidgetHost = appWidgetHost,
                                 refreshTriggers = pluginRefreshTriggers,
+                                appTimeFormat = appTimeFormat,
                                 onPluginLongClick = onPluginLongClick,
                                 onWidgetLongClick = onWidgetLongClick,
                             )
@@ -289,6 +292,7 @@ private fun StandbyItemView(
     item: StandbyItem,
     appWidgetHost: android.appwidget.AppWidgetHost,
     refreshTriggers: Map<String, Long>,
+    appTimeFormat: String,
     onPluginLongClick: ((String) -> Unit)?,
     onWidgetLongClick: ((StandbyItem.NativeAppWidget) -> Unit)?,
 ) {
@@ -297,6 +301,7 @@ private fun StandbyItemView(
             plugin = item.plugin,
             modifier = Modifier.fillMaxSize(),
             refreshTrigger = refreshTriggers[item.plugin.localId] ?: 0L,
+            appTimeFormat = appTimeFormat,
             onLongClick = onPluginLongClick?.let { cb -> { cb(item.plugin.localId) } },
         )
 

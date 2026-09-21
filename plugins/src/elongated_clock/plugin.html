@@ -111,27 +111,28 @@
 </div>
 
 <script>
-    // Configuration variables with default values (overridden by Android side if configured)
-    window.twentyFourHour = false;
-    try {
-        if (window.AndroidSensors && typeof window.AndroidSensors.getCustomizations === 'function') {
-            const cust = JSON.parse(window.AndroidSensors.getCustomizations());
-            if (cust.twentyFourHour !== undefined) {
-                window.twentyFourHour = (cust.twentyFourHour === true || cust.twentyFourHour === "true");
+    // Asked fresh each tick rather than cached. The app resolves this: it honours
+    // this plugin's TIME_FORMAT if set, otherwise the app setting, otherwise the
+    // system's own 12/24 toggle, which JavaScript cannot see from in here.
+    function use24Hour() {
+        try {
+            if (window.AndroidSensors && typeof window.AndroidSensors.getTimeFormat === 'function') {
+                return window.AndroidSensors.getTimeFormat() === "24";
             }
-        }
-    } catch (e) {}
+        } catch (e) {}
+        return false;
+    }
 
     function updateClock() {
         const now = new Date();
 
-        // Format Time based on twentyFourHour preference
+        // Format time according to the resolved clock format
         let hours = now.getHours();
         let minutes = now.getMinutes();
         const minStr = minutes < 10 ? '0' + minutes : '' + minutes;
 
         let timeStr;
-        if (window.twentyFourHour) {
+        if (use24Hour()) {
             let hoursStr = hours < 10 ? '0' + hours : '' + hours;
             timeStr = `${hoursStr}:${minStr}`;
         } else {
@@ -193,9 +194,6 @@
     }
 
     window.onCustomizationChanged = (changes) => {
-        if (changes.twentyFourHour !== undefined) {
-            window.twentyFourHour = (changes.twentyFourHour === true || changes.twentyFourHour === "true");
-        }
         updateClock();
     };
 

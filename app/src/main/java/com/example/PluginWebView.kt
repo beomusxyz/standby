@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
@@ -19,8 +20,11 @@ fun PluginWebView(
     plugin: PluginModel,
     modifier: Modifier = Modifier,
     refreshTrigger: Long = 0L,
+    appTimeFormat: String = TimeFormat.SYSTEM,
     onLongClick: (() -> Unit)? = null
 ) {
+    val systemIs24Hour = android.text.format.DateFormat.is24HourFormat(LocalContext.current)
+    val currentAppTimeFormat = rememberUpdatedState(appTimeFormat)
     // generate customization json
     val customizationsJson = generateCustomizationsJson(plugin.customizations)
     val currentCustomizations = rememberUpdatedState(customizationsJson)
@@ -58,7 +62,20 @@ fun PluginWebView(
                 
                 // set sensor bridge
                 addJavascriptInterface(
-                    SensorBridge(context, { currentPlugin.value.permissions }) { currentCustomizations.value },
+                    SensorBridge(
+                        context,
+                        { currentPlugin.value.permissions },
+                        { currentCustomizations.value },
+                    ) {
+                        // Read through the lambda, not captured, so changing the setting
+                        // or the plugin's own override takes effect without a reload.
+                        val own = currentPlugin.value.customizations[TimeFormat.PLUGIN_KEY]
+                        TimeFormat.resolvePlugin(
+                            pluginValue = own?.value ?: own?.default,
+                            appSetting = currentAppTimeFormat.value,
+                            systemIs24Hour = systemIs24Hour,
+                        )
+                    },
                     "AndroidSensors"
                 )
                 addJavascriptInterface(

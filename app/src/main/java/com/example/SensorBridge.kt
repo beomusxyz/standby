@@ -20,7 +20,15 @@ import java.util.concurrent.TimeUnit
 class SensorBridge(
     private val context: Context,
     private val allowedPermissionsProvider: () -> List<String>,
-    private val customizationsProvider: () -> String
+    private val customizationsProvider: () -> String,
+    /**
+     * Whether this plugin should draw a 24 hour clock, already resolved against the
+     * plugin's own override and the app setting. Defaults to the system so a bridge
+     * built without one still gives a sane answer.
+     */
+    private val use24HourProvider: () -> Boolean = {
+        android.text.format.DateFormat.is24HourFormat(context)
+    }
 ) {
     constructor(
         context: Context,
@@ -215,6 +223,15 @@ class SensorBridge(
         }
     }
 
+    /**
+     * `"12"` or `"24"`, already resolved. A plugin cannot work this out for itself:
+     * Android's toggle is not part of the locale, so asking JavaScript gives the locale
+     * default and is wrong for anyone who changed it. See [TimeFormat].
+     */
+    @JavascriptInterface
+    fun getTimeFormat(): String =
+        if (use24HourProvider()) TimeFormat.TWENTY_FOUR else TimeFormat.TWELVE
+
     @JavascriptInterface
     fun getCustomizations(): String {
         return customizationsProvider()
@@ -238,7 +255,8 @@ class SensorBridge(
         val creatorPackage = nextAlarm.showIntent?.creatorPackage
 
         val formattedTime = try {
-            SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(triggerTime))
+            SimpleDateFormat(TimeFormat.pattern(use24HourProvider()), Locale.getDefault())
+                .format(Date(triggerTime))
         } catch (e: Exception) {
             ""
         }

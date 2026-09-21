@@ -170,7 +170,10 @@ object PluginManager {
                     val default = varJson.optString("default", "")
                     val target = if (varJson.has("target") && !varJson.isNull("target")) varJson.getString("target") else null
                     val value = if (varJson.has("value") && !varJson.isNull("value")) varJson.getString("value") else null
-                    customizations[key] = CustomizationOption(type, default, target, value)
+                    val optionsArray = varJson.optJSONArray("options")
+                    val options = (0 until (optionsArray?.length() ?: 0))
+                        .mapNotNull { optionsArray?.optString(it)?.takeIf(String::isNotBlank) }
+                    customizations[key] = CustomizationOption(type, default, target, value, options)
                 }
             }
 
