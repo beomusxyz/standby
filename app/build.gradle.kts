@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "org.phorophyte.standby"
   compileSdk { version = release(37) }
 
   defaultConfig {
-    applicationId = "com.geenk.standby"
+    applicationId = "org.phorophyte.standby"
     minSdk = 24
     targetSdk = 37
     versionCode = 1
