@@ -109,6 +109,7 @@ class StandbyDreamService : DreamService(), LifecycleOwner, ViewModelStoreOwner,
 
     override fun onDreamingStarted() {
         super.onDreamingStarted()
+        AppWidgetHostHelper.startListening(this)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
@@ -116,6 +117,7 @@ class StandbyDreamService : DreamService(), LifecycleOwner, ViewModelStoreOwner,
     override fun onDreamingStopped() {
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        AppWidgetHostHelper.stopListening()
         super.onDreamingStopped()
     }
 
