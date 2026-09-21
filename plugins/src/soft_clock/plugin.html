@@ -41,6 +41,10 @@
           align-items: center;
           justify-content: center;
         }
+
+        .digit-row {
+          display: contents;
+        }
         .digit-group {
           mix-blend-mode: screen;
         }
@@ -126,40 +130,65 @@
           position: relative;
           z-index: 1;
         }
+
+        @media (max-aspect-ratio: 1/1) {
+          body {
+            width: 100vw;
+            font-size: 52vw;
+          }
+
+          .clock-container {
+            flex-direction: column;
+            line-height: 0.76;
+          }
+
+          .digit-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          #colon {
+            display: none;
+          }
+        }
     </style>
 </head>
 <body>
 
 <div class="clock-container">
+    <div class="digit-row">
+        <span class="digit-group" id="group-hour-tens" style="display: none;">
+          <span class="swing" style="animation-delay: -2s;">
+            <span id="hour-tens" class="digit"></span>
+          </span>
+        </span>
 
-    <span class="digit-group" id="group-hour-tens" style="display: none;">
-      <span class="swing" style="animation-delay: -2s;">
-        <span id="hour-tens" class="digit"></span>
-      </span>
-    </span>
-
-    <span class="digit-group" id="group-hour-ones">
-      <span class="swing" style="animation-delay: -4s;">
-        <span id="hour-ones" class="digit">9</span>
-      </span>
-    </span>
+        <span class="digit-group" id="group-hour-ones">
+          <span class="swing" style="animation-delay: -4s;">
+            <span id="hour-ones" class="digit">9</span>
+          </span>
+        </span>
+    </div>
 
     <div id="colon" class="swing" style="animation-delay: -1s;">
         <div class="dot"></div>
         <div class="dot"></div>
     </div>
 
-    <span class="digit-group" id="group-min-tens">
-      <span class="swing" style="animation-delay: -5s;">
-        <span id="min-tens" class="digit">4</span>
-      </span>
-    </span>
+    <div class="digit-row">
+        <span class="digit-group" id="group-min-tens">
+          <span class="swing" style="animation-delay: -5s;">
+            <span id="min-tens" class="digit">4</span>
+          </span>
+        </span>
 
-    <span class="digit-group" id="group-min-ones">
-      <span class="swing" style="animation-delay: -3s;">
-        <span id="min-ones" class="digit">1</span>
-      </span>
-    </span>
+        <span class="digit-group" id="group-min-ones">
+          <span class="swing" style="animation-delay: -3s;">
+            <span id="min-ones" class="digit">1</span>
+          </span>
+        </span>
+    </div>
 
 </div>
 

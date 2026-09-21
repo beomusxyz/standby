@@ -126,6 +126,7 @@ object PluginManager {
             val author = manifestJson.optString("author", "Unknown")
             val version = manifestJson.optString("version", "1.0.0")
             val size = manifestJson.optString("size", "full")
+            val orientation = readPluginOrientation(manifestJson)
 
             val permissions = mutableListOf<String>()
             val permissionsArray = manifestJson.optJSONArray("permissions")
@@ -185,6 +186,7 @@ object PluginManager {
                 author = author,
                 version = version,
                 size = size,
+                orientation = orientation,
                 permissions = permissions,
                 providers = providers,
                 networkWhitelist = networkWhitelist,
@@ -247,6 +249,7 @@ object PluginManager {
             val author = manifestJson.optString("author", "Unknown")
             val version = manifestJson.optString("version", "1.0.0")
             val size = manifestJson.optString("size", "full")
+            val orientation = readPluginOrientation(manifestJson)
 
             val permissions = mutableListOf<String>()
             val permissionsArray = manifestJson.optJSONArray("permissions")
@@ -280,6 +283,7 @@ object PluginManager {
                 author = author,
                 version = version,
                 size = size,
+                orientation = orientation,
                 permissions = permissions,
                 providers = providers,
                 networkWhitelist = networkWhitelist,
@@ -312,6 +316,7 @@ object PluginManager {
                 author = "Local Import",
                 version = "1.0.0",
                 size = "full",
+                orientation = PluginOrientation.RESPONSIVE,
                 permissions = listOf("battery"),
                 providers = emptyList(),
                 networkWhitelist = emptyList(),
@@ -349,6 +354,8 @@ object PluginManager {
                     put("description", pending.description)
                     put("author", pending.author)
                     put("version", pending.version)
+                    put("size", pending.size)
+                    put("orientation", PluginOrientation.RESPONSIVE)
                     put("permissions", JSONArray().apply {
                         pending.permissions.forEach { put(it) }
                     })
@@ -412,6 +419,14 @@ object PluginManager {
     fun importHtmlPlugin(context: Context, htmlContent: String, displayName: String): PluginModel {
         val pending = prepareHtmlPluginImport(context, htmlContent, displayName)
         return completePendingImport(context, pending, displayName)
+    }
+
+    private fun readPluginOrientation(manifest: JSONObject): String {
+        val orientation = manifest.optString("orientation", PluginOrientation.RESPONSIVE)
+        require(orientation in PluginOrientation.supported) {
+            "orientation must be responsive, landscape, or portrait"
+        }
+        return orientation
     }
 
     private fun getLayoutFile(context: Context): File {

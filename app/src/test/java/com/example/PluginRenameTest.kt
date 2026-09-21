@@ -42,6 +42,7 @@ class PluginRenameTest {
             put("description", "Test Description")
             put("author", "Tester")
             put("version", "1.0.0")
+            put("orientation", "landscape")
             put("permissions", org.json.JSONArray())
         }
         manifestFile.writeText(initialManifest.toString(2))
@@ -75,5 +76,6 @@ class PluginRenameTest {
         val loaded = PluginManager.loadPluginDirectory(context, "plugin_test_rename", "local_test_id")
         assertNotNull(loaded)
         assertEquals("New Plugin Name", loaded?.name)
+        assertEquals(PluginOrientation.LANDSCAPE, loaded?.orientation)
     }
 }

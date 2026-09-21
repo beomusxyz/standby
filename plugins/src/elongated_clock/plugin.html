@@ -23,11 +23,13 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            width: 100vw;
             margin: 0;
             font-family: 'GoogleSansFlex';
             font-variation-settings: 'wght' 700, 'wdth' 50, 'ROND' 50;
             user-select: none;
             overflow: hidden;
+            box-sizing: border-box;
         }
 
         .clock-container {
@@ -41,6 +43,10 @@
             font-size: 85vh;
             line-height: 0.8;
             letter-spacing: -5px;
+        }
+
+        .portrait-time {
+            display: none;
         }
 
         .side-info {
@@ -87,12 +93,63 @@
             margin-left: -1vh;
             fill: var(--accent-color);
         }
+
+        @media (max-aspect-ratio: 1/1) {
+            .clock-container {
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 5vh;
+                width: 100%;
+                height: 100%;
+                padding: 4vh 6vw;
+                box-sizing: border-box;
+            }
+
+            .time-display {
+                display: none;
+            }
+
+            .portrait-time {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                color: var(--accent-color);
+                font-size: 48vw;
+                line-height: 0.72;
+                letter-spacing: -4px;
+            }
+
+            .side-info {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: flex-end;
+                width: 76vw;
+                padding: 0;
+            }
+
+            .date-display,
+            .weather-display,
+            .bottom-info {
+                font-size: 5vw;
+            }
+
+            .alarm-icon {
+                width: 6vw;
+                height: 6vw;
+                margin-left: 0;
+            }
+        }
     </style>
 </head>
 <body>
 
 <div class="clock-container">
     <div class="time-display" id="time">2:37</div>
+    <div class="portrait-time" aria-hidden="true">
+        <div id="portrait-hour">02</div>
+        <div id="portrait-minute">37</div>
+    </div>
 
     <div class="side-info">
         <div class="top-info">
@@ -142,6 +199,8 @@
         }
 
         document.getElementById('time').textContent = timeStr;
+        document.getElementById('portrait-hour').textContent = hours.toString().padStart(2, '0');
+        document.getElementById('portrait-minute').textContent = minStr;
 
         const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
         const dayName = days[now.getDay()];

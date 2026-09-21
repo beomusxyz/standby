@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -297,13 +298,27 @@ private fun StandbyItemView(
     onWidgetLongClick: ((StandbyItem.NativeAppWidget) -> Unit)?,
 ) {
     when (item) {
-        is StandbyItem.Plugin -> PluginWebView(
-            plugin = item.plugin,
-            modifier = Modifier.fillMaxSize(),
-            refreshTrigger = refreshTriggers[item.plugin.localId] ?: 0L,
-            appTimeFormat = appTimeFormat,
-            onLongClick = onPluginLongClick?.let { cb -> { cb(item.plugin.localId) } },
-        )
+        is StandbyItem.Plugin -> BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val rotation = fixedOrientationRotation(
+                orientation = if (item.plugin.size == "full") item.plugin.orientation else PluginOrientation.RESPONSIVE,
+                viewportIsLandscape = maxWidth >= maxHeight,
+            )
+            val pluginWidth = if (rotation == 0f) maxWidth else maxHeight
+            val pluginHeight = if (rotation == 0f) maxHeight else maxWidth
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                PluginWebView(
+                    plugin = item.plugin,
+                    modifier = if (rotation == 0f) {
+                        Modifier.fillMaxSize()
+                    } else {
+                        Modifier.requiredSize(width = pluginWidth, height = pluginHeight).rotate(rotation)
+                    },
+                    refreshTrigger = refreshTriggers[item.plugin.localId] ?: 0L,
+                    appTimeFormat = appTimeFormat,
+                    onLongClick = onPluginLongClick?.let { cb -> { cb(item.plugin.localId) } },
+                )
+            }
+        }
 
         is StandbyItem.NativeAppWidget -> AppWidgetView(
             appWidgetHost = appWidgetHost,
@@ -314,6 +329,13 @@ private fun StandbyItemView(
         )
     }
 }
+
+internal fun fixedOrientationRotation(orientation: String, viewportIsLandscape: Boolean): Float =
+    when (orientation) {
+        PluginOrientation.LANDSCAPE -> if (viewportIsLandscape) 0f else 90f
+        PluginOrientation.PORTRAIT -> if (viewportIsLandscape) 90f else 0f
+        else -> 0f
+    }
 
 internal fun setWindowRefreshRate(window: android.view.Window, modeId: Int) {
     try {

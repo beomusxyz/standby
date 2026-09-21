@@ -8,6 +8,7 @@ data class PluginModel(
     val author: String,
     val version: String,
     val size: String = "full", // size type
+    val orientation: String = PluginOrientation.RESPONSIVE,
     val permissions: List<String>,
     val providers: List<String> = emptyList(),
     val networkWhitelist: List<String>,
@@ -17,6 +18,13 @@ data class PluginModel(
     val customizations: Map<String, CustomizationOption> = emptyMap(),
     val isBuiltIn: Boolean = false
 )
+
+object PluginOrientation {
+    const val RESPONSIVE = "responsive"
+    const val LANDSCAPE = "landscape"
+    const val PORTRAIT = "portrait"
+    val supported = setOf(RESPONSIVE, LANDSCAPE, PORTRAIT)
+}
 
 data class CustomizationOption(
     val type: String,
@@ -33,6 +41,7 @@ data class PendingPluginImport(
     val author: String,
     val version: String,
     val size: String,
+    val orientation: String = PluginOrientation.RESPONSIVE,
     val permissions: List<String>,
     val providers: List<String> = emptyList(),
     val networkWhitelist: List<String>,
@@ -41,4 +50,3 @@ data class PendingPluginImport(
     val tempDir: java.io.File,
     val originalFileName: String
 )
-

@@ -251,6 +251,12 @@ fun PluginInfoDialog(
                                 label = "Layout Size",
                                 value = if (plugin.size == "half") "Half Width (Split Screen)" else "Full Width"
                             )
+                            if (plugin.size == "full") {
+                                DetailRow(
+                                    label = "Orientation",
+                                    value = plugin.orientation.replaceFirstChar { it.uppercase() }
+                                )
+                            }
                             DetailRow(
                                 label = "Source",
                                 value = if (plugin.isBuiltIn) "Built-in System Plugin" else "Installed Custom Plugin"

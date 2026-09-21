@@ -3,8 +3,9 @@
   "name": "Bubbly clock",
   "description": "A whimsical clock",
   "author": "honk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "size": "full",
+  "orientation": "responsive",
   "permissions": [],
   "network_whitelist": [],
   "min_app_version": 1

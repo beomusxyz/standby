@@ -150,6 +150,12 @@ fun ImportConfirmationDialog(
                                 label = "Layout Size",
                                 value = if (pendingImport.size == "half") "Split Screen / Half Width" else "Full Width"
                             )
+                            if (pendingImport.size == "full") {
+                                DetailRow(
+                                    label = "Orientation",
+                                    value = pendingImport.orientation.replaceFirstChar { it.uppercase() }
+                                )
+                            }
                             
                             if (pendingImport.description.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))

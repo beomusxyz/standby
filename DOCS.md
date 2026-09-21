@@ -42,7 +42,8 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
   "description": "Displays current local time with customizable styles.",
   "author": "honk honk",
   "version": "1.0.0",
-  "size": "half",
+  "size": "full",
+  "orientation": "responsive",
   "permissions": [
     "alarms"
   ],
@@ -66,6 +67,7 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
 | `author` | String | Developer name or organization. |
 | `version` | String | Semantic version string (e.g., `"1.0.0"`). |
 | `size` | String | Layout eligibility: `"half"` can share a page with another half plugin; `"full"` takes a page by itself. See [Layout size and orientation](#layout-size-and-orientation). |
+| `orientation` | String | Full-width viewport behavior: `"responsive"` (default), `"landscape"`, or `"portrait"`. Ignored for half-width plugins. |
 | `permissions` | Array | Declares requested hardware permissions (see [Sensors](#5-native-sensor-bridge-windowandroidsensors)). |
 | `providers` | Array | Declares requested external data providers (see [Providers](#6-native-provider-bridge-windowandroidproviders)). |
 | `network_whitelist` | Array | Allowed domains. External HTTP requests to domains not in this list are automatically blocked. |
@@ -73,7 +75,12 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
 
 ### Layout size and orientation
 
-`size` decides which page layouts can offer the plugin. It does not give the plugin a fixed aspect ratio.
+`size` decides which page layouts can offer the plugin. `orientation` decides what viewport
+a full-width plugin receives. It is optional and defaults to `"responsive"`.
+
+Use `"responsive"` unless the design truly has only one usable shape. The WebView follows
+the phone, so one plugin can provide both layouts and switch between them with CSS. This is
+the seamless option and avoids separate portrait and landscape installs.
 
 | Page | Phone position | Plugin viewport |
 | :--- | :--- | :--- |
@@ -81,7 +88,7 @@ The manifest contains metadata and declares permissions, providers, and sandbox 
 | Half | Landscape | Half the page width and all of its height |
 | Half | Portrait | All of the page width and half of its height |
 
-The screen saver follows the phone's position. A half page puts its two plugins side by side when the page is wider than tall and stacks them when it is taller than wide. Rotating the phone changes the WebView size without changing the manifest.
+The screen saver follows the phone's position. A half page puts its two plugins side by side when the page is wider than tall and stacks them when it is taller than wide. Rotating the phone changes a responsive WebView's size without changing the manifest.
 
 Write the page for the box it receives. CSS media queries see the plugin's viewport, which may have the opposite orientation from the phone. Aspect-ratio queries are less ambiguous:
 
@@ -100,7 +107,22 @@ Write the page for the box it receives. CSS media queries see the plugin's viewp
 }
 ```
 
-Use `vmin`, percentages, `clamp()`, and `aspect-ratio` instead of assuming a pixel size. Test full, half-landscape, and half-portrait layouts. Absolutely positioned elements are usually the first ones to break.
+Use `vmin`, percentages, `clamp()`, and `aspect-ratio` instead of assuming a pixel size. Test full-width portrait and landscape layouts, plus both half-page shapes. Absolutely positioned elements are usually the first ones to break.
+
+If a full-width design intentionally supports one shape only, declare it:
+
+```json
+{
+  "size": "full",
+  "orientation": "landscape"
+}
+```
+
+`"landscape"` always gives the plugin a wide viewport. `"portrait"` always gives it a tall
+viewport. When the phone does not match, the host swaps the WebView dimensions and rotates
+the complete plugin. Android's lock-screen controls and phone orientation are unchanged.
+Fixed orientation is supported only for full-width plugins; half-width plugins always use
+their actual box.
 
 ### `min_app_version` does not block installation
 
