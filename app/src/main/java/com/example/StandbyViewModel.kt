@@ -272,7 +272,7 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         loadPlugins()
-        if (sharedPreferences.getBoolean("server_enabled", true)) {
+        if (sharedPreferences.getBoolean("server_enabled", false)) {
             startServer()
         }
         providerManager.startHourlyWeatherUpdates(viewModelScope)
@@ -700,29 +700,24 @@ class StandbyViewModel(application: Application) : AndroidViewModel(application)
                 viewModelScope.launch {
                     try {
                         val context = getApplication<Application>()
-                        val cachedFile = File(context.cacheDir, "uploaded_plugin_temp_" + System.currentTimeMillis())
-                        file.copyTo(cachedFile, overwrite = true)
-                        
-                        try {
-                            val pending = if (contentType.contains("application/zip") || file.name.endsWith(".zip")) {
-                                cachedFile.inputStream().use { input ->
-                                    PluginManager.prepareZipPluginImport(context, input, file.name)
-                                }
-                            } else {
-                                val htmlContent = cachedFile.readText()
-                                PluginManager.prepareHtmlPluginImport(context, htmlContent, "Uploaded Plugin")
+                        val pending = if (contentType.contains("application/zip") || file.name.endsWith(".zip")) {
+                            file.inputStream().use { input ->
+                                PluginManager.prepareZipPluginImport(context, input, file.name)
                             }
-                            if (_confirmImportEnabled.value) {
-                                _pendingImport.value = pending
-                            } else {
-                                PluginManager.completePendingImport(context, pending, pending.name)
-                                loadPlugins()
-                            }
-                        } finally {
-                            cachedFile.delete()
+                        } else {
+                            PluginManager.prepareHtmlPluginImport(context, file.readText(), "Uploaded Plugin")
+                        }
+                        if (_confirmImportEnabled.value) {
+                            _pendingImport.value = pending
+                        } else {
+                            PluginManager.completePendingImport(context, pending, pending.name)
+                            loadPlugins()
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
+                    } finally {
+                        // PluginServer hands us ownership of this temp file.
+                        file.delete()
                     }
                 }
             }
