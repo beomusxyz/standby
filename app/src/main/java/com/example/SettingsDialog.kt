@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -1438,7 +1439,8 @@ fun ProviderSettingsTab(
                 }
                 
                 if (weatherLastUpdate > 0L) {
-                    val formattedTime = java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(weatherLastUpdate))
+                    val locale = LocalConfiguration.current.locales[0]
+                    val formattedTime = java.text.SimpleDateFormat("hh:mm a", locale).format(java.util.Date(weatherLastUpdate))
                     Text(
                         text = "Last updated: $formattedTime",
                         style = MaterialTheme.typography.bodySmall,
