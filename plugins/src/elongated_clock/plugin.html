@@ -168,6 +168,22 @@
 </div>
 
 <script>
+    let showDate = true;
+    let showWeather = true;
+
+    try {
+        if (window.AndroidSensors && typeof window.AndroidSensors.getCustomizations === 'function') {
+            const saved = JSON.parse(window.AndroidSensors.getCustomizations());
+            showDate = saved.showDate ?? showDate;
+            showWeather = saved.showWeather ?? showWeather;
+        }
+    } catch (e) {}
+
+    function updateOptionalInfo() {
+        document.getElementById('date').style.display = showDate ? '' : 'none';
+        document.getElementById('weather-display').style.display = showWeather ? '' : 'none';
+    }
+
     // Asked fresh each tick rather than cached. The app resolves this: it honours
     // this plugin's TIME_FORMAT if set, otherwise the app setting, otherwise the
     // system's own 12/24 toggle, which JavaScript cannot see from in here.
@@ -211,7 +227,9 @@
         // Also check and update the alarm information
         updateAlarm();
 
-        updateWeather();
+        if (showWeather) {
+            updateWeather();
+        }
     }
 
     function updateAlarm() {
@@ -253,9 +271,13 @@
     }
 
     window.onCustomizationChanged = (changes) => {
+        showDate = changes.showDate ?? showDate;
+        showWeather = changes.showWeather ?? showWeather;
+        updateOptionalInfo();
         updateClock();
     };
 
+    updateOptionalInfo();
     updateClock();
     setInterval(updateClock, 1000);
 </script>

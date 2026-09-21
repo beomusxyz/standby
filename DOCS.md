@@ -249,6 +249,9 @@ window.onCustomizationChanged = function(updatedValues) {
 };
 ```
 
+The bundled Elongated Clock uses two boolean JS customizations, `showDate` and
+`showWeather`. Both default to `true`; disabling either hides that block immediately.
+
 ---
 
 ## 5. Native Sensor Bridge (`window.AndroidSensors`)

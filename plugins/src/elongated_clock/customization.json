@@ -14,6 +14,16 @@
     "default": "#8bb3f8",
     "target": "css"
   },
+  "showDate": {
+    "type": "boolean",
+    "default": "true",
+    "target": "js"
+  },
+  "showWeather": {
+    "type": "boolean",
+    "default": "true",
+    "target": "js"
+  },
   "TIME_FORMAT": {
     "type": "enum",
     "options": [
