@@ -103,9 +103,9 @@ Widgets you add from other apps run their own code with their own permissions an
 The reverse does not happen: a hosted widget cannot read this app's settings, your plugins, your location or anything else of yours. It is handed only its own size.
 
 
-## The GrapheneOS warning
+## Warning for GrapheneOS Users
 
-GrapheneOS may tell you Standby tried to load code from storage. That is expected and it is the plugin system: plugins are HTML and JavaScript read from the app's own storage and run in a web view.
+GrapheneOS may tell you Standby tried to perform DCL (Dynamic Code Loading) via storage. That is expected and it is the plugin system: plugins are HTML and JavaScript read from the app's own storage and run in a web view.
 
 It is worth understanding rather than dismissing. A plugin is code you chose to install, and it runs with whatever the app grants it. Install ones you trust, and read what the import dialog tells you.
 
