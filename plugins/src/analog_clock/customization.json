@@ -8,7 +8,6 @@
   "showSeconds": {
     "type": "boolean",
     "default": "true",
-    "target": "js",
-    "value": "false"
+    "target": "js"
   }
 }
