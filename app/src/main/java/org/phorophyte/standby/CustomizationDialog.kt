@@ -43,7 +43,10 @@ fun CustomizationDialog(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = null,
@@ -58,7 +61,8 @@ fun CustomizationDialog(
                         },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
                     )
                 }
                 IconButton(onClick = onDismissRequest) {
@@ -100,11 +104,11 @@ fun CustomizationDialog(
                     }
                 }
                 is StandbyPage.HalfWidth -> {
-                    Row(
+                    AdaptiveTwoPane(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        spacing = 16.dp
                     ) {
                         val leftPlugin = activePage.leftPlugin
                         if (leftPlugin != null) {
@@ -112,14 +116,10 @@ fun CustomizationDialog(
                                 plugin = leftPlugin,
                                 onCustomizationValueChange = onCustomizationValueChange,
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
                             )
                         } else {
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
+                                modifier = Modifier,
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -136,14 +136,10 @@ fun CustomizationDialog(
                                 plugin = rightPlugin,
                                 onCustomizationValueChange = onCustomizationValueChange,
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
                             )
                         } else {
                             Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
+                                modifier = Modifier,
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(

@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import kotlinx.coroutines.delay
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -185,9 +186,9 @@ fun StandbyScreen(window: android.view.Window, viewModel: StandbyViewModel = vie
         onResult = { isGranted -> viewModel.setServerEnabled(isGranted) }
     )
 
-    var showSettingsDialog by remember { mutableStateOf(false) }
-    var showCustomizationDialog by remember { mutableStateOf(false) }
-    var showLayoutsDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by rememberSaveable { mutableStateOf(false) }
+    var showCustomizationDialog by rememberSaveable { mutableStateOf(false) }
+    var showLayoutsDialog by rememberSaveable { mutableStateOf(false) }
     var selectedPluginLocalIdForInfo by remember { mutableStateOf<String?>(null) }
     val selectedPluginForInfo = plugins.firstOrNull { it.localId == selectedPluginLocalIdForInfo }
     var lastPendingImport by remember { mutableStateOf<PendingPluginImport?>(null) }

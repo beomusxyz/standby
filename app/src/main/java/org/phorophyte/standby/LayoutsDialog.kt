@@ -22,11 +22,13 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,7 +56,8 @@ fun LayoutsDialog(
     onPickAppWidget: (pageId: String, isLeft: Boolean?) -> Unit = { _, _ -> },
     onDismissRequest: () -> Unit
 ) {
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    val portrait = LocalConfiguration.current.screenHeightDp > LocalConfiguration.current.screenWidthDp
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -66,16 +69,40 @@ fun LayoutsDialog(
                 .safeDrawingPadding()
                 .padding(24.dp)
         ) {
-            // header row
-            Row(
+            if (portrait) Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    LayoutsActions(
+                        compact = true,
+                        onImportPluginClick = onImportPluginClick,
+                        onRefreshWidgetsClick = onRefreshWidgetsClick,
+                        onDismissRequest = onDismissRequest
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    LayoutsTabs(selectedTabIndex) { selectedTabIndex = it }
+                }
+            } else Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
@@ -89,61 +116,15 @@ fun LayoutsDialog(
                         contentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.width(360.dp)
                     ) {
-                        Tab(
-                            selected = selectedTabIndex == 0,
-                            onClick = { selectedTabIndex = 0 },
-                            text = { Text("Configure Layouts", fontWeight = FontWeight.Bold) }
-                        )
-                        Tab(
-                            selected = selectedTabIndex == 1,
-                            onClick = { selectedTabIndex = 1 },
-                            text = { Text("Widgets Library", fontWeight = FontWeight.Bold) }
-                        )
+                        LayoutsTabs(selectedTabIndex) { selectedTabIndex = it }
                     }
                 }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    FilledTonalButton(
-                        onClick = onImportPluginClick,
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Import Widget", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    }
-
-                    FilledTonalButton(
-                        onClick = onRefreshWidgetsClick,
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier.height(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Refresh Widgets", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                    }
-
-                    IconButton(onClick = onDismissRequest) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close Layouts Dialog",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                LayoutsActions(
+                    compact = false,
+                    onImportPluginClick = onImportPluginClick,
+                    onRefreshWidgetsClick = onRefreshWidgetsClick,
+                    onDismissRequest = onDismissRequest
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -180,6 +161,70 @@ fun LayoutsDialog(
     }
 }
 
+@Composable
+private fun LayoutsTabs(selectedTabIndex: Int, onSelect: (Int) -> Unit) {
+    Tab(
+        selected = selectedTabIndex == 0,
+        onClick = { onSelect(0) },
+        text = { Text("Configure Layouts", fontWeight = FontWeight.Bold) }
+    )
+    Tab(
+        selected = selectedTabIndex == 1,
+        onClick = { onSelect(1) },
+        text = { Text("Widgets Library", fontWeight = FontWeight.Bold) }
+    )
+}
+
+@Composable
+private fun LayoutsActions(
+    compact: Boolean,
+    onImportPluginClick: () -> Unit,
+    onRefreshWidgetsClick: () -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 0.dp else 10.dp)
+    ) {
+        if (compact) {
+            IconButton(onClick = onImportPluginClick) {
+                Icon(Icons.Default.Add, contentDescription = "Import Widget")
+            }
+            IconButton(onClick = onRefreshWidgetsClick) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh Widgets")
+            }
+        } else {
+            FilledTonalButton(
+                onClick = onImportPluginClick,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Import Widget", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            }
+            FilledTonalButton(
+                onClick = onRefreshWidgetsClick,
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.height(36.dp)
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Refresh Widgets", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+        IconButton(onClick = onDismissRequest) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close Layouts Dialog",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConfigureLayoutsTab(
@@ -195,6 +240,7 @@ fun ConfigureLayoutsTab(
     onPickAppWidget: (String, Boolean?) -> Unit = { _, _ -> }
 ) {
     val lazyListState = rememberLazyListState()
+    val portrait = LocalConfiguration.current.screenHeightDp > LocalConfiguration.current.screenWidthDp
     var previousSize by remember { mutableStateOf(standbyPages.size) }
 
     // scroll to new page slot
@@ -338,7 +384,7 @@ fun ConfigureLayoutsTab(
                                                     .clickable { onUpdatePageSlotType(page.pageId, "full") }
                                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                                             ) {
-                                                Text("Full Width", style = MaterialTheme.typography.labelSmall, color = fullColor, fontWeight = FontWeight.Bold)
+                                                Text(if (portrait) "Full" else "Full Width", style = MaterialTheme.typography.labelSmall, color = fullColor, fontWeight = FontWeight.Bold)
                                             }
 
                                             val splitBg = if (!isFull) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
@@ -349,7 +395,7 @@ fun ConfigureLayoutsTab(
                                                     .clickable { onUpdatePageSlotType(page.pageId, "half") }
                                                     .padding(horizontal = 10.dp, vertical = 4.dp)
                                             ) {
-                                                Text("Split Screen", style = MaterialTheme.typography.labelSmall, color = splitColor, fontWeight = FontWeight.Bold)
+                                                Text(if (portrait) "Split" else "Split Screen", style = MaterialTheme.typography.labelSmall, color = splitColor, fontWeight = FontWeight.Bold)
                                             }
                                         }
 
@@ -389,37 +435,14 @@ fun ConfigureLayoutsTab(
                                         }
                                         is StandbyPage.HalfWidth -> {
                                             val halfOptions = plugins.filter { it.size == "half" }.ifEmpty { plugins }
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                            ) {
-                                                PluginDropdown(
-                                                    label = "",
-                                                    selectedItemId = page.leftItem.localId,
-                                                    selectedItemName = page.leftItem.displayName,
-                                                    plugins = halfOptions,
-                                                    onPluginSelected = { newId ->
-                                                        onUpdatePageSlotPlugin(page.pageId, true, newId)
-                                                    },
-                                                    onPickAppWidget = if (appWidgetsEnabled) {
-                                                        { onPickAppWidget(page.pageId, true) }
-                                                    } else null,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                                PluginDropdown(
-                                                    label = "",
-                                                    selectedItemId = page.rightItem.localId,
-                                                    selectedItemName = page.rightItem.displayName,
-                                                    plugins = halfOptions,
-                                                    onPluginSelected = { newId ->
-                                                        onUpdatePageSlotPlugin(page.pageId, false, newId)
-                                                    },
-                                                    onPickAppWidget = if (appWidgetsEnabled) {
-                                                        { onPickAppWidget(page.pageId, false) }
-                                                    } else null,
-                                                    modifier = Modifier.weight(1f)
-                                                )
-                                            }
+                                            SplitPluginDropdowns(
+                                                page = page,
+                                                plugins = halfOptions,
+                                                portrait = portrait,
+                                                appWidgetsEnabled = appWidgetsEnabled,
+                                                onUpdatePageSlotPlugin = onUpdatePageSlotPlugin,
+                                                onPickAppWidget = onPickAppWidget
+                                            )
                                         }
                                     }
                                 }
@@ -428,6 +451,52 @@ fun ConfigureLayoutsTab(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SplitPluginDropdowns(
+    page: StandbyPage.HalfWidth,
+    plugins: List<PluginModel>,
+    portrait: Boolean,
+    appWidgetsEnabled: Boolean,
+    onUpdatePageSlotPlugin: (String, Boolean, String) -> Unit,
+    onPickAppWidget: (String, Boolean?) -> Unit
+) {
+    @Composable
+    fun Dropdown(isLeft: Boolean, modifier: Modifier) {
+        val item = if (isLeft) page.leftItem else page.rightItem
+        PluginDropdown(
+            label = if (portrait) if (isLeft) "Top" else "Bottom" else "",
+            selectedItemId = item.localId,
+            selectedItemName = item.displayName,
+            plugins = plugins,
+            onPluginSelected = { newId ->
+                onUpdatePageSlotPlugin(page.pageId, isLeft, newId)
+            },
+            onPickAppWidget = if (appWidgetsEnabled) {
+                { onPickAppWidget(page.pageId, isLeft) }
+            } else null,
+            modifier = modifier
+        )
+    }
+
+    if (portrait) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Dropdown(true, Modifier.fillMaxWidth())
+            Dropdown(false, Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Dropdown(true, Modifier.weight(1f))
+            Dropdown(false, Modifier.weight(1f))
         }
     }
 }

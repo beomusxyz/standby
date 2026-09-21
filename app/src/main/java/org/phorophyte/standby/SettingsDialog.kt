@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -81,7 +82,7 @@ fun SettingsDialog(
     onSearchLocations: suspend (String) -> List<ProviderManager.GeocodingResult>,
     onDismissRequest: () -> Unit
 ) {
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
 
     // Resolved once here rather than at every call site. Keyed on the configuration so a
     // config change re-reads the system toggle instead of leaving a stale answer up.
@@ -104,16 +105,42 @@ fun SettingsDialog(
                 .safeDrawingPadding()
                 .padding(24.dp)
         ) {
-            // header row
-            Row(
+            val portrait = LocalConfiguration.current.screenHeightDp > LocalConfiguration.current.screenWidthDp
+            if (portrait) Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = onDismissRequest) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Settings",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color.Transparent,
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    SettingsTabs(selectedTabIndex) { selectedTabIndex = it }
+                }
+            } else Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = null,
@@ -127,21 +154,7 @@ fun SettingsDialog(
                         contentColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.width(520.dp)
                     ) {
-                        Tab(
-                            selected = selectedTabIndex == 0,
-                            onClick = { selectedTabIndex = 0 },
-                            text = { Text("General", fontWeight = FontWeight.Bold) }
-                        )
-                        Tab(
-                            selected = selectedTabIndex == 1,
-                            onClick = { selectedTabIndex = 1 },
-                            text = { Text("Night Mode", fontWeight = FontWeight.Bold) }
-                        )
-                        Tab(
-                            selected = selectedTabIndex == 2,
-                            onClick = { selectedTabIndex = 2 },
-                            text = { Text("Providers", fontWeight = FontWeight.Bold) }
-                        )
+                        SettingsTabs(selectedTabIndex) { selectedTabIndex = it }
                     }
                 }
                 IconButton(onClick = onDismissRequest) {
@@ -225,6 +238,25 @@ fun SettingsDialog(
 }
 
 @Composable
+private fun SettingsTabs(selectedTabIndex: Int, onSelect: (Int) -> Unit) {
+    Tab(
+        selected = selectedTabIndex == 0,
+        onClick = { onSelect(0) },
+        text = { Text("General", fontWeight = FontWeight.Bold) }
+    )
+    Tab(
+        selected = selectedTabIndex == 1,
+        onClick = { onSelect(1) },
+        text = { Text("Night Mode", fontWeight = FontWeight.Bold) }
+    )
+    Tab(
+        selected = selectedTabIndex == 2,
+        onClick = { onSelect(2) },
+        text = { Text("Providers", fontWeight = FontWeight.Bold) }
+    )
+}
+
+@Composable
 fun GeneralSettingsTab(
     timeFormat: String,
     onTimeFormatChange: (String) -> Unit,
@@ -251,15 +283,13 @@ fun GeneralSettingsTab(
     appWidgetsEnabled: Boolean,
     onAppWidgetsEnabledChange: (Boolean) -> Unit
 ) {
-    Row(
+    AdaptiveTwoPane(
         modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
+        spacing = 20.dp
     ) {
         // left column
         Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
@@ -681,9 +711,7 @@ fun GeneralSettingsTab(
         
         // right column
         Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
@@ -905,15 +933,13 @@ fun NightModeTab(
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
 
-    Row(
+    AdaptiveTwoPane(
         modifier = Modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
+        spacing = 20.dp
     ) {
         // Left Column: Activation & Schedule
         Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
@@ -1106,9 +1132,7 @@ fun NightModeTab(
 
         // Right Column: Display Adjustments (OLED & Brightness)
         Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
+            modifier = Modifier,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
