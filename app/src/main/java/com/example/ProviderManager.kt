@@ -156,7 +156,7 @@ class ProviderManager(
                             .putString("weather_cache", json.toString())
                             .putLong("weather_last_update", System.currentTimeMillis())
                             .apply()
-                        Log.d("ProviderManager", "Successfully updated weather forecast for $lat, $lon")
+                        Log.d("ProviderManager", "Successfully updated weather forecast")
                     }
                 } else {
                     Log.e("ProviderManager", "Failed weather fetch: ${response.code}")

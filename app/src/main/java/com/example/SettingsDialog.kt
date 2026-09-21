@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 @Composable
 fun SettingsDialog(
@@ -1338,7 +1338,19 @@ fun ProviderSettingsTab(
             
             var searchQuery by remember { mutableStateOf("") }
             var searchResults by remember { mutableStateOf<List<ProviderManager.GeocodingResult>>(emptyList()) }
-            val coroutineScope = rememberCoroutineScope()
+
+            // Keyed on the query, so each keystroke cancels the pending effect and
+            // restarts the delay. Without it every character was its own request and
+            // typing "Amsterdam" sent eight of them, each carrying a prefix of what
+            // you were looking up.
+            LaunchedEffect(searchQuery) {
+                if (searchQuery.length < 2) {
+                    searchResults = emptyList()
+                    return@LaunchedEffect
+                }
+                delay(350)
+                searchResults = onSearchLocations(searchQuery)
+            }
             
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -1346,16 +1358,7 @@ fun ProviderSettingsTab(
             ) {
                 OutlinedTextField(
                     value = searchQuery,
-                    onValueChange = { newValue ->
-                        searchQuery = newValue
-                        if (newValue.length >= 2) {
-                            coroutineScope.launch {
-                                searchResults = onSearchLocations(newValue)
-                            }
-                        } else {
-                            searchResults = emptyList()
-                        }
-                    },
+                    onValueChange = { searchQuery = it },
                     label = { Text("Search City/Region") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
